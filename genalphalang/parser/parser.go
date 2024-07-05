@@ -6,5 +6,5 @@ type AST struct {
 }
 
 func Parse(tokens []lexer.Token) AST {
-	return AST{}
+	panic("Not implemented")
 }
