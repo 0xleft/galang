@@ -6,7 +6,7 @@ variables:
   GITHUB_MIRROR_TOKEN:
     description: "GitHub token for mirroring"
   GITHUB_MIRROR_URL: 
-    value: https://github.com/0xleft/genalphalang.git
+    value: https://x-access-token:$GITHUB_MIRROR_TOKEN@github.com/0xleft/genalphalang.git
     description: "GitHub URL for mirroring"
 
 default:
@@ -17,9 +17,6 @@ mirror_push:
   tags:
     - docker-builder
   script:
-    - apt-get update -y
-    - apt-get install -y gh
-    - gh auth login --with-token < <(echo "$GITHUB_MIRROR_TOKEN")
     - git remote add mirror $GITHUB_MIRROR_URL
     - git push --mirror mirror
   only:
