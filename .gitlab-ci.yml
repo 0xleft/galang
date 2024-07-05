@@ -19,7 +19,7 @@ mirror_push:
   script:
     - apt-get update -y
     - apt-get install -y gh
-    - GH_TOKEN=$GITHUB_MIRROR_TOKEN gh auth login 
+    - gh auth login --with-token < <(echo "$GITHUB_MIRROR_TOKEN")
     - git remote add mirror $GITHUB_MIRROR_URL
     - git push --mirror mirror
   only:
