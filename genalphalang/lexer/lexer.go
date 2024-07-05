@@ -1,6 +1,7 @@
 package lexer
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -83,6 +84,7 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		char = line[i]
+		fmt.Println(string(char), i, line)
 
 		if inComment {
 			i++
@@ -177,6 +179,7 @@ func lexLine(line string, lineNum int) []Token {
 				continue
 			}
 
+			var added = false
 			for j := i + 1; j < len(line); j++ {
 				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' {
 					continue
@@ -188,17 +191,19 @@ func lexLine(line string, lineNum int) []Token {
 					Line:  lineNum,
 				})
 
+				added = true
 				i = j
 				break
 			}
 
-			tokens = append(tokens, Token{
-				Type:  TokenTypeIdentifier,
-				Value: line[i:],
-				Line:  lineNum,
-			})
-
-			break
+			if !added {
+				tokens = append(tokens, Token{
+					Type:  TokenTypeIdentifier,
+					Value: line[i:],
+					Line:  lineNum,
+				})
+				break
+			}
 		}
 
 		if char >= '0' && char <= '9' {
@@ -207,6 +212,7 @@ func lexLine(line string, lineNum int) []Token {
 				continue
 			}
 
+			var added = false
 			for j := i + 1; j < len(line); j++ {
 				if line[j] >= '0' && line[j] <= '9' {
 					continue
@@ -218,15 +224,18 @@ func lexLine(line string, lineNum int) []Token {
 					Line:  lineNum,
 				})
 
+				added = true
 				i = j
 				break
 			}
 
-			tokens = append(tokens, Token{
-				Type:  TokenTypeNumber,
-				Value: line[i:],
-				Line:  lineNum,
-			})
+			if !added {
+				tokens = append(tokens, Token{
+					Type:  TokenTypeNumber,
+					Value: line[i:],
+					Line:  lineNum,
+				})
+			}
 
 			break
 		}
