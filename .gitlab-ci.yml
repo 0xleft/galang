@@ -19,7 +19,9 @@ mirror_push:
   script:
     - apt-get update
     - apt-get install -y git
-    - git checkout origin/main
+    - git checkout main
+    - git add .
+    - git commit -m "Mirror push"
     - git push https://x-access-token:$GITHUB_MIRROR_TOKEN@$GITHUB_MIRROR_URL
   only:
     - main
