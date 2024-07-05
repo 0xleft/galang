@@ -17,6 +17,8 @@ mirror_push:
   tags:
     - docker-builder
   script:
+    - apt-get update
+    - apt-get install -y git
     - git remote add mirror $GITHUB_MIRROR_URL
     - git push --mirror mirror
   only:
