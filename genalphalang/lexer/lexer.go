@@ -10,6 +10,7 @@ const (
 	TokenTypeIdentifier TokenType = iota
 	TokenTypeNumber
 	TokenTypeString
+	TokenTypeBoolean
 	TokenTypeKeyword
 	TokenTypeOperator
 	TokenTypePunctuation
@@ -32,6 +33,8 @@ const (
 	KeywordWhile  Keyword = "yap"
 	KeywordImport Keyword = "gyat"
 	KeywordReturn Keyword = "rizzult"
+	KeywordTrue   Keyword = "yay"
+	KeywordFalse  Keyword = "nay"
 )
 
 var (
