@@ -160,7 +160,7 @@ func lexLine(line string, lineNum int) []Token {
 			continue
 		}
 
-		if char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == ',' {
+		if char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == ',' || char == ';' {
 			tokens = append(tokens, Token{
 				Type:  TokenTypePunctuation,
 				Value: string(char),

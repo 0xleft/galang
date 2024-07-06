@@ -64,6 +64,11 @@ type ParserState struct {
 	ASTNodeCall      ASTNode // for constructing function call
 	ASTNodeExpr      ASTNode // for constructing expressions
 	ASTRoot          ASTNode
+	ASTNodeDecl      ASTNode
+	ASTNodeAssign    ASTNode
+	ASTNodeIf        ASTNode
+	ASTNodeWhile     ASTNode
+	ASTNodeReturn    ASTNode
 }
 
 // just a huge state machine
@@ -82,6 +87,21 @@ func Parse(tokens []lexer.Token) ASTNode {
 		ASTNodeExpr: ASTNode{
 			Type: ASTNoteTypeExpression,
 		},
+		ASTNodeDecl: ASTNode{
+			Type: ASTNodeTypeVariableDeclaration,
+		},
+		ASTNodeAssign: ASTNode{
+			Type: ASTNodeTypeVariableAssignment,
+		},
+		ASTNodeIf: ASTNode{
+			Type: ASTNodeTypeIf,
+		},
+		ASTNodeWhile: ASTNode{
+			Type: ASTNodeTypeWhile,
+		},
+		ASTNodeReturn: ASTNode{
+			Type: ASTNodeTypeReturn,
+		},
 	}
 
 	for _, token := range tokens {
@@ -99,7 +119,6 @@ func Parse(tokens []lexer.Token) ASTNode {
 			parserState.DeclarationCount++
 		}
 		if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordEnd) {
-
 			parserState.DeclarationCount--
 		}
 		if token.Type == lexer.TokenTypePunctuation && token.Value == "(" {
@@ -135,6 +154,10 @@ func Parse(tokens []lexer.Token) ASTNode {
 			continue
 		}
 
+		if parseVariableDeclaration(&parserState, token) {
+			continue
+		}
+
 		parserState.TokenIndex++
 	}
 
@@ -163,17 +186,7 @@ func parseReturn(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
-func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool {
-	return false
-}
-
 func parseExpression(parserState *ParserState, token lexer.Token) bool {
-	if parserState.ASTNodeExpr.Type == 0 {
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
-		}
-	}
-
 	if token.Type == lexer.TokenTypeIdentifier {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeIdentifier,
@@ -243,8 +256,52 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
+func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool {
+	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordVar) && parserState.ProgramState == ProgramStateNormal {
+		parserState.ProgramState = ProgramStateVariableDeclaration
+		return true
+	}
+
+	if parserState.ProgramState == ProgramStateVariableDeclaration {
+		fmt.Println(parserState.ASTNodeDecl)
+		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsArgList {
+			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, ASTNode{
+				Type:  ASTNodeTypeIdentifier,
+				Value: token.Value,
+				Line:  parserState.Line,
+			})
+
+			return true
+		}
+
+		if token.Type == lexer.TokenTypePunctuation && token.Value == "=" && !parserState.IsArgList {
+			parserState.IsArgList = true
+			return true
+		}
+
+		if token.Type == lexer.TokenTypePunctuation && token.Value == ";" && parserState.IsArgList {
+			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, parserState.ASTNodeExpr)
+
+			parserState.ProgramState = ProgramStateNormal
+			parserState.IsArgList = false
+			parserState.ASTNodeFunc.Children = append(parserState.ASTNodeFunc.Children, parserState.ASTNodeDecl)
+			parserState.ASTNodeDecl = ASTNode{
+				Type: ASTNodeTypeVariableDeclaration,
+			}
+			return true
+		}
+
+		if parserState.IsArgList {
+			parseExpression(parserState, token)
+			return true
+		}
+	}
+
+	return false
+}
+
 func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordCall) {
+	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordCall) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateFunctionCall
 		return true
 	}
@@ -271,6 +328,9 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 			parserState.ASTNodeFunc.Children = append(parserState.ASTNodeFunc.Children, parserState.ASTNodeCall)
 			parserState.ASTNodeCall = ASTNode{
 				Type: ASTNodeTypeFunctionCall,
+			}
+			parserState.ASTNodeExpr = ASTNode{
+				Type: ASTNoteTypeExpression,
 			}
 			return true
 		}
@@ -302,7 +362,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 
 // handles only function declaration: args, identity of func and end and pushes to AST root
 func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordFunc) {
+	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordFunc) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateFunctionDeclaration
 		parserState.ASTNodeFunc = ASTNode{
 			Type: ASTNodeTypeFunctionDeclaration,
