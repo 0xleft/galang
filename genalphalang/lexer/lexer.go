@@ -1,37 +1,51 @@
 package lexer
 
 import (
-	"fmt"
 	"strings"
 )
 
 type TokenType int
 
 const (
-	TokenTypeIdentifier  TokenType = 0
-	TokenTypeNumber      TokenType = 1
-	TokenTypeString      TokenType = 2
-	TokenTypeKeyword     TokenType = 3
-	TokenTypeOperator    TokenType = 4
-	TokenTypePunctuation TokenType = 5
-	TokenTypeComment     TokenType = 6
-	TokenTypeWhitespace  TokenType = 7
-	TokenTypeEOF         TokenType = 8
-	TokenTypeUnknown     TokenType = 9
+	TokenTypeIdentifier TokenType = iota
+	TokenTypeNumber
+	TokenTypeString
+	TokenTypeKeyword
+	TokenTypeOperator
+	TokenTypePunctuation
+	TokenTypeComment
+	TokenTypeWhitespace
+	TokenTypeNewline
+	TokenTypeUnknown
+)
+
+type Keyword string
+
+const (
+	KeywordVar    Keyword = "fax"
+	KeywordIf     Keyword = "skibidi"
+	KeywordIfYes  Keyword = "yeah"
+	KeywordIfNo   Keyword = "nah"
+	KeywordFunc   Keyword = "lowkey"
+	KeywordEnd    Keyword = "end"
+	KeywordCall   Keyword = "fire"
+	KeywordWhile  Keyword = "yap"
+	KeywordImport Keyword = "gyat"
+	KeywordReturn Keyword = "rizzult"
 )
 
 var (
 	Keywords = []string{
-		"fax",      // declaration like var
-		"skibidi",  // ifnot
-		"yeah",     // if yes
-		"nah",      // if no
-		"lowkey",   // function declaration start
-		"end",      // end code block like if or loop or function
-		"fire",     // call like in assembly like call .test
-		"fanumtax", // while
-		"gyat",     // import like in python
-		"rizzult",  // return
+		string(KeywordVar),
+		string(KeywordIf),
+		string(KeywordIfYes),
+		string(KeywordIfNo),
+		string(KeywordFunc),
+		string(KeywordEnd),
+		string(KeywordCall),
+		string(KeywordWhile),
+		string(KeywordImport),
+		string(KeywordReturn),
 	}
 )
 
@@ -57,6 +71,11 @@ func Lex(contents string, filename string) []Token {
 		}
 
 		tokens = append(tokens, lexLine(line, i)...)
+		tokens = append(tokens, Token{
+			Type:  TokenTypeNewline,
+			Value: "\n",
+			Line:  i,
+		})
 	}
 
 	return tokens
@@ -84,7 +103,7 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		char = line[i]
-		fmt.Println(string(char), i, line)
+		// fmt.Println(string(char), i, line)
 
 		if inComment {
 			i++

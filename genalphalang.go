@@ -20,7 +20,6 @@ func noFile() {
 func withFile(filename string) {
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents, filename)
-	fmt.Println(tokens)
 	ast := parser.Parse(tokens)
 	interpreter.Interpret(ast)
 }
