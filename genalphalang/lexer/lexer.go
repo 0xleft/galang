@@ -259,7 +259,8 @@ func lexLine(line string, lineNum int) []Token {
 				})
 			}
 
-			break
+			i++
+			continue
 		}
 	}
 
