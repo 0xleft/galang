@@ -10,21 +10,6 @@ import (
 	"bobik.squidwock.com/root/genalphalang/genalphalang/utils"
 )
 
-func noFile() {
-	// read from stdin
-	for {
-		//
-	}
-}
-
-func withFile(filename string) {
-	contents := utils.ReadContents(filename)
-	tokens := lexer.Lex(contents, filename)
-	fmt.Println(tokens)
-	ast := parser.Parse(tokens)
-	interpreter.Interpret(ast)
-}
-
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -33,10 +18,14 @@ func main() {
 	}()
 
 	if len(os.Args) < 2 {
-		noFile()
+		fmt.Println("Usage: genalphalang <filename>")
 		return
 	}
 
 	filename := os.Args[1]
-	withFile(filename)
+	contents := utils.ReadContents(filename)
+	tokens := lexer.Lex(contents, filename)
+	fmt.Println(tokens)
+	ast := parser.Parse(tokens)
+	interpreter.Interpret(&ast)
 }

@@ -23,18 +23,19 @@ const (
 type Keyword string
 
 const (
-	KeywordVar    Keyword = "fax"
-	KeywordIf     Keyword = "skibidi"
-	KeywordIfYes  Keyword = "yeah"
-	KeywordIfNo   Keyword = "nah"
-	KeywordFunc   Keyword = "lowkey"
-	KeywordEnd    Keyword = "end"
-	KeywordCall   Keyword = "fire"
-	KeywordWhile  Keyword = "yap"
-	KeywordImport Keyword = "gyat"
-	KeywordReturn Keyword = "rizzult"
-	KeywordTrue   Keyword = "yay"
-	KeywordFalse  Keyword = "nay"
+	KeywordNamespace Keyword = "land"
+	KeywordVar       Keyword = "fax"
+	KeywordIf        Keyword = "skibidi"
+	KeywordIfYes     Keyword = "yeah"
+	KeywordIfNo      Keyword = "nah"
+	KeywordFunc      Keyword = "lowkey"
+	KeywordEnd       Keyword = "end"
+	KeywordCall      Keyword = "fire"
+	KeywordWhile     Keyword = "yap"
+	KeywordImport    Keyword = "gyat"
+	KeywordReturn    Keyword = "rizzult"
+	KeywordTrue      Keyword = "yay"
+	KeywordFalse     Keyword = "nay"
 )
 
 var (
@@ -96,7 +97,6 @@ func lexLine(line string, lineNum int) []Token {
 	var char byte
 
 	for {
-
 		if i >= len(line) {
 			if inString {
 				panic("Unclosed string at line " + string(lineNum))
@@ -171,7 +171,44 @@ func lexLine(line string, lineNum int) []Token {
 			continue
 		}
 
-		if char == '+' || char == '-' || char == '*' || char == '/' || char == '%' || char == '=' || char == '!' || char == '<' || char == '>' {
+		// number
+		if char >= '0' && char <= '9' {
+			if inString {
+				i++
+				continue
+			}
+
+			var added = false
+			for j := i + 1; j < len(line); j++ {
+				if line[j] >= '0' && line[j] <= '9' || line[j] == '.' {
+					continue
+				}
+
+				tokens = append(tokens, Token{
+					Type:  TokenTypeNumber,
+					Value: line[i:j],
+					Line:  lineNum,
+				})
+
+				added = true
+				i = j
+				break
+			}
+
+			if !added {
+				tokens = append(tokens, Token{
+					Type:  TokenTypeNumber,
+					Value: line[i:],
+					Line:  lineNum,
+				})
+
+				i += len(line[i:])
+			}
+
+			continue
+		}
+
+		if char == '+' || char == '-' || char == '*' || char == '/' || char == '%' || char == '=' || char == '!' || char == '<' || char == '>' || char == '&' || char == '|' || char == '^' || char == '.' {
 			tokens = append(tokens, Token{
 				Type:  TokenTypeOperator,
 				Value: string(char),
@@ -195,7 +232,7 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		// identifier
-		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' || char == '.' {
 			if inString {
 				i++
 				continue
@@ -203,7 +240,7 @@ func lexLine(line string, lineNum int) []Token {
 
 			var added = false
 			for j := i + 1; j < len(line); j++ {
-				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' {
+				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' || line[j] == '.' {
 					continue
 				}
 
@@ -224,42 +261,10 @@ func lexLine(line string, lineNum int) []Token {
 					Value: line[i:],
 					Line:  lineNum,
 				})
-				break
-			}
-		}
 
-		if char >= '0' && char <= '9' {
-			if inString {
-				i++
-				continue
+				i += len(line[i:])
 			}
 
-			var added = false
-			for j := i + 1; j < len(line); j++ {
-				if line[j] >= '0' && line[j] <= '9' {
-					continue
-				}
-
-				tokens = append(tokens, Token{
-					Type:  TokenTypeNumber,
-					Value: line[i:j],
-					Line:  lineNum,
-				})
-
-				added = true
-				i = j
-				break
-			}
-
-			if !added {
-				tokens = append(tokens, Token{
-					Type:  TokenTypeNumber,
-					Value: line[i:],
-					Line:  lineNum,
-				})
-			}
-
-			i++
 			continue
 		}
 	}
