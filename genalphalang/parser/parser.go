@@ -615,19 +615,15 @@ func makeBlocks(expression *ASTNode) {
 		if expression.Children[i].Type == ASTNodeTypeBlock && expression.Children[i].Value == ")" {
 			blockCount--
 			if blockCount == 0 {
-				block.Children = expression.Children[blockStart+1 : i]
-
-				// we need to make a copy because we are refenrecing children from the same one and thats f'd up
 				var astCopy = make([]ASTNode, len(expression.Children))
 				for j, node := range expression.Children {
 					astCopy[j] = deepCopyASTNode(node)
 				}
 
-				astCopy[blockStart] = block
+				block.Children = astCopy[blockStart+1 : i]
+				expression.Children = append(expression.Children[:blockStart], block)
+				expression.Children = append(expression.Children, astCopy[i+1:]...)
 
-				astCopy = append(astCopy[:blockStart+1], astCopy[i+1:]...)
-
-				expression.Children = astCopy
 				i = blockStart
 				makeBlocks(&block)
 			}
