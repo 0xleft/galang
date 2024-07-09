@@ -135,7 +135,7 @@ func lexLine(line string, lineNum int) []Token {
 			continue
 		}
 
-		if char == '/' {
+		if char == '`' {
 			tokens = append(tokens, Token{
 				Type:  TokenTypeComment,
 				Value: line[i:],

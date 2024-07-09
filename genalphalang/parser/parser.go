@@ -217,6 +217,7 @@ func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 		}
 
 		if token.Type == lexer.TokenTypeNewline && parserState.IsArgList {
+			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeAssign.Children = append(parserState.ASTNodeAssign.Children, parserState.ASTNodeExpr)
 
 			parserState.ProgramState = ProgramStateNormal
@@ -284,6 +285,7 @@ func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
 	if parserState.ProgramState == ProgramStateIf || parserState.ProgramState == ProgramStateWhile {
 		if token.Type == lexer.TokenTypeNewline {
 			// append expression
+			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeExpr)
 			// append if block to parent
 			parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children = append(parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children, *parserState.ASTNodeParent)
@@ -318,6 +320,7 @@ func parseReturn(parserState *ParserState, token lexer.Token) bool {
 
 	if parserState.ProgramState == ProgramStateReturn {
 		if token.Type == lexer.TokenTypeNewline {
+			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeReturn.Children = append(parserState.ASTNodeReturn.Children, parserState.ASTNodeExpr)
 			parserState.ProgramState = ProgramStateNormal
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeReturn)
@@ -361,6 +364,7 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 		}
 
 		if token.Type == lexer.TokenTypeNewline && parserState.IsArgList {
+			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, parserState.ASTNodeExpr)
 
 			parserState.ProgramState = ProgramStateNormal
@@ -405,6 +409,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 		// before args because we want to be able to end
 		if token.Type == lexer.TokenTypePunctuation && token.Value == ")" {
 			// append last arg
+			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, parserState.ASTNodeExpr)
 			parserState.IsArgList = false
 
@@ -419,6 +424,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 				if parserState.ASTNodeExpr.Type == 0 {
 					panic("PARSER: Expected expression")
 				}
+				fixExpression(&parserState.ASTNodeExpr)
 				parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, parserState.ASTNodeExpr)
 				return true
 			}
@@ -569,4 +575,64 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	return false
+}
+
+// makes it so its correct order of operations
+func fixExpression(expression *ASTNode) {
+	makeBlocks(expression)
+	// fix order of operations
+}
+
+func deepCopyASTNode(node ASTNode) ASTNode {
+	copyNode := node
+	copyNode.Children = make([]ASTNode, len(node.Children))
+	for i, child := range node.Children {
+		copyNode.Children[i] = deepCopyASTNode(child)
+	}
+	return copyNode
+}
+
+func makeBlocks(expression *ASTNode) {
+	var block = ASTNode{
+		Type: ASTNodeTypeBlock,
+	}
+	var blockCount = 0
+	var blockStart = 0
+
+	var i = 0
+	for {
+		if i >= len(expression.Children) {
+			break
+		}
+
+		if expression.Children[i].Type == ASTNodeTypeBlock && expression.Children[i].Value == "(" {
+			if blockCount == 0 {
+				blockStart = i
+			}
+			blockCount++
+		}
+
+		if expression.Children[i].Type == ASTNodeTypeBlock && expression.Children[i].Value == ")" {
+			blockCount--
+			if blockCount == 0 {
+				block.Children = expression.Children[blockStart+1 : i]
+
+				// we need to make a copy because we are refenrecing children from the same one and thats f'd up
+				var astCopy = make([]ASTNode, len(expression.Children))
+				for j, node := range expression.Children {
+					astCopy[j] = deepCopyASTNode(node)
+				}
+
+				astCopy[blockStart] = block
+
+				astCopy = append(astCopy[:blockStart+1], astCopy[i+1:]...)
+
+				expression.Children = astCopy
+				i = blockStart
+				makeBlocks(&block)
+			}
+		}
+
+		i++
+	}
 }
