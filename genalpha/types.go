@@ -21,7 +21,7 @@ const (
 	ASTNodeTypeNumber
 	ASTNodeTypeString
 	ASTNodeTypeBoolean
-	ASTNodeTypeArray
+	ASTNodeTypeNone
 	ASTNodeTypeFunctionArgument
 	ASTNodeTypeIndex
 	ASTNodeTypeMemberAccess
@@ -66,6 +66,7 @@ const (
 	KeywordReturn    Keyword = "rizzult"
 	KeywordTrue      Keyword = "yay"
 	KeywordFalse     Keyword = "nay"
+	KeywordNone      Keyword = "nuthin"
 )
 
 var (

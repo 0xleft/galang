@@ -152,10 +152,11 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 		parserState.TokenIndex++
 	}
 
-	PrintAST(parserState.ASTRoot)
 	if parserState.DeclarationCount != 0 {
 		panic("PARSER: Mismatched declarations, meaning you are missing end somewhere")
 	}
+
+	PrintAST(parserState.ASTRoot, 0)
 
 	return parserState.ASTRoot
 }
@@ -487,6 +488,14 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 		return true
 	}
 
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordNone) {
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: token.Value,
+		})
+		return true
+	}
+
 	if token.Type == genalphatypes.TokenTypeString {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeString,
@@ -535,6 +544,18 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 // makes it so its correct order of operations
 func fixExpression(expression *genalphatypes.ASTNode) {
 	makeBlocks(expression)
+	orderOperations(expression)
+}
+
+func orderOperations(expression *genalphatypes.ASTNode) {
+	var i int
+	for {
+		if i >= len(expression.Children) {
+			break
+		}
+
+		i++
+	}
 }
 
 func makeBlocks(expression *genalphatypes.ASTNode) {
@@ -580,17 +601,12 @@ func makeBlocks(expression *genalphatypes.ASTNode) {
 	}
 }
 
-func PrintAST(ast genalphatypes.ASTNode) {
-	fmt.Println("AST:")
-	printASTNode(ast, 0)
-}
-
-func printASTNode(ast genalphatypes.ASTNode, level int) {
+func PrintAST(ast genalphatypes.ASTNode, level int) {
 	for i := 0; i < level; i++ {
 		fmt.Print("  ")
 	}
 	fmt.Printf("%d: %s\n", ast.Type, ast.Value)
 	for _, child := range ast.Children {
-		printASTNode(child, level+1)
+		PrintAST(child, level+1)
 	}
 }
