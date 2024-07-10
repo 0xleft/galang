@@ -4,42 +4,9 @@ import (
 	"fmt"
 	"slices"
 
-	"bobik.squidwock.com/root/genalphalang/genalphalang/lexer"
+	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
+	"bobik.squidwock.com/root/genalphalang/genalpha/lexer"
 )
-
-type ASTNodeType int
-
-const (
-	ASTNodeTypeProgram ASTNodeType = iota
-	ASTNodeTypeFunctionDeclaration
-	ASTNodeTypeFunctionCall
-	ASTNodeTypeVariableDeclaration
-	ASTNodeTypeVariableAssignment
-	ASTNoteTypeExpression
-	ASTNodeTypeIf
-	ASTNodeTypeImport
-	ASTNodeTypeWhile
-	ASTNodeTypeReturn
-	ASTNodeTypeOperator
-	ASTNodeTypeBinaryOperation
-	ASTNodeTypeUnaryOperation
-	ASTNodeTypeIdentifier
-	ASTNodeTypeNumber
-	ASTNodeTypeString
-	ASTNodeTypeBoolean
-	ASTNodeTypeArray
-	ASTNodeTypeFunctionArgument
-	ASTNodeTypeIndex
-	ASTNodeTypeMemberAccess
-	ASTNodeTypeBlock
-	ASTNodeTypeBlockPriv
-)
-
-type ASTNode struct {
-	Type     ASTNodeType
-	Children []ASTNode
-	Value    string
-}
 
 type ProgramState int
 
@@ -64,53 +31,53 @@ type ParserState struct {
 	DeclarationCount    int // loops, if, function
 	IsArgList           bool
 	IsFuncBlock         bool
-	ASTNodeFunc         ASTNode // for constructing function declaration
-	ASTNodeCall         ASTNode // for constructing function call
-	ASTNodeExpr         ASTNode // for constructing expressions
-	ASTRoot             ASTNode
-	ASTNodeDecl         ASTNode
-	ASTNodeAssign       ASTNode
-	ASTNodeReturn       ASTNode
-	ASTNodeImport       ASTNode
-	ASTNodeMemberAccess ASTNode
-	ASTNodeNamespace    ASTNode
-	ASTNodeParent       *ASTNode   // for nested blocks
-	ASTNodeStack        []*ASTNode // for nested blocks too
+	ASTNodeFunc         genalphatypes.ASTNode // for constructing function declaration
+	ASTNodeCall         genalphatypes.ASTNode // for constructing function call
+	ASTNodeExpr         genalphatypes.ASTNode // for constructing expressions
+	ASTRoot             genalphatypes.ASTNode
+	ASTNodeDecl         genalphatypes.ASTNode
+	ASTNodeAssign       genalphatypes.ASTNode
+	ASTNodeReturn       genalphatypes.ASTNode
+	ASTNodeImport       genalphatypes.ASTNode
+	ASTNodeMemberAccess genalphatypes.ASTNode
+	ASTNodeNamespace    genalphatypes.ASTNode
+	ASTNodeParent       *genalphatypes.ASTNode   // for nested blocks
+	ASTNodeStack        []*genalphatypes.ASTNode // for nested blocks too
 }
 
 // just a huge state machine
-func Parse(tokens []lexer.Token) ASTNode {
+func Parse(tokens []lexer.Token) genalphatypes.ASTNode {
 	var parserState = ParserState{
 		ProgramState: ProgramStateNormal,
-		ASTRoot: ASTNode{
-			Type: ASTNodeTypeProgram,
+		ASTRoot: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeProgram,
 		},
-		ASTNodeFunc: ASTNode{
-			Type: ASTNodeTypeFunctionDeclaration,
+		ASTNodeFunc: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeFunctionDeclaration,
 		},
-		ASTNodeCall: ASTNode{
-			Type: ASTNodeTypeFunctionCall,
+		ASTNodeCall: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeFunctionCall,
 		},
-		ASTNodeExpr: ASTNode{
-			Type: ASTNoteTypeExpression,
+		ASTNodeExpr: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeExpression,
 		},
-		ASTNodeDecl: ASTNode{
-			Type: ASTNodeTypeVariableDeclaration,
+		ASTNodeDecl: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeVariableDeclaration,
 		},
-		ASTNodeAssign: ASTNode{
-			Type: ASTNodeTypeVariableAssignment,
+		ASTNodeAssign: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeVariableAssignment,
 		},
-		ASTNodeReturn: ASTNode{
-			Type: ASTNodeTypeReturn,
+		ASTNodeReturn: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeReturn,
 		},
-		ASTNodeImport: ASTNode{
-			Type: ASTNodeTypeImport,
+		ASTNodeImport: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeImport,
 		},
-		ASTNodeMemberAccess: ASTNode{
-			Type: ASTNodeTypeMemberAccess,
+		ASTNodeMemberAccess: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeMemberAccess,
 		},
-		ASTNodeNamespace: ASTNode{
-			Type: ASTNodeTypeIdentifier,
+		ASTNodeNamespace: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeIdentifier,
 		},
 	}
 
@@ -186,7 +153,7 @@ func Parse(tokens []lexer.Token) ASTNode {
 		parserState.TokenIndex++
 	}
 
-	fmt.Println(parserState.ASTRoot, parserState.DeclarationCount, parserState.OpenBrackets, parserState.OpenCurly)
+	PrintAST(parserState.ASTRoot)
 	if parserState.DeclarationCount != 0 {
 		panic("PARSER: Mismatched declarations, meaning you are missing end somewhere")
 	}
@@ -197,14 +164,14 @@ func Parse(tokens []lexer.Token) ASTNode {
 func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeIdentifier && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableAssignment
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
 		}
-		parserState.ASTNodeAssign = ASTNode{
-			Type: ASTNodeTypeVariableAssignment,
+		parserState.ASTNodeAssign = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeVariableAssignment,
 		}
-		parserState.ASTNodeAssign.Children = append(parserState.ASTNodeAssign.Children, ASTNode{
-			Type:  ASTNodeTypeIdentifier,
+		parserState.ASTNodeAssign.Children = append(parserState.ASTNodeAssign.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeIdentifier,
 			Value: token.Value,
 		})
 		return true
@@ -239,16 +206,16 @@ func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 func parseImport(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordImport) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateImport
-		parserState.ASTNodeImport = ASTNode{
-			Type: ASTNodeTypeImport,
+		parserState.ASTNodeImport = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeImport,
 		}
 		return true
 	}
 
 	if parserState.ProgramState == ProgramStateImport {
 		if token.Type == lexer.TokenTypeString {
-			parserState.ASTNodeImport.Children = append(parserState.ASTNodeImport.Children, ASTNode{
-				Type:  ASTNodeTypeString,
+			parserState.ASTNodeImport.Children = append(parserState.ASTNodeImport.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeString,
 				Value: token.Value,
 			})
 			parserState.ProgramState = ProgramStateNormal
@@ -264,17 +231,17 @@ func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
 	if (token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordIf) && parserState.ProgramState == ProgramStateNormal) ||
 		(token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordWhile) && parserState.ProgramState == ProgramStateNormal) {
 		parserState.ASTNodeStack = append(parserState.ASTNodeStack, parserState.ASTNodeParent)
-		var nodeType = ASTNodeTypeIf
+		var nodeType = genalphatypes.ASTNodeTypeIf
 		var programState = ProgramStateIf
 		if token.Value == string(lexer.KeywordWhile) {
-			nodeType = ASTNodeTypeWhile
+			nodeType = genalphatypes.ASTNodeTypeWhile
 			programState = ProgramStateWhile
 		}
-		parserState.ASTNodeParent = &ASTNode{
+		parserState.ASTNodeParent = &genalphatypes.ASTNode{
 			Type: nodeType,
 		}
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
 		}
 		parserState.ProgramState = programState
 		parserState.IsArgList = true
@@ -308,11 +275,11 @@ func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
 func parseReturn(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordReturn) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateReturn
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
 		}
-		parserState.ASTNodeReturn = ASTNode{
-			Type: ASTNodeTypeReturn,
+		parserState.ASTNodeReturn = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeReturn,
 		}
 		return true
 	}
@@ -336,11 +303,11 @@ func parseReturn(parserState *ParserState, token lexer.Token) bool {
 func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordVar) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableDeclaration
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
 		}
-		parserState.ASTNodeDecl = ASTNode{
-			Type: ASTNodeTypeVariableDeclaration,
+		parserState.ASTNodeDecl = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeVariableDeclaration,
 		}
 		return true
 	}
@@ -348,8 +315,8 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 	if parserState.ProgramState == ProgramStateVariableDeclaration {
 		/// fmt.Println(parserState.ASTNodeDecl)
 		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsArgList {
-			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, ASTNode{
-				Type:  ASTNodeTypeIdentifier,
+			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeIdentifier,
 				Value: token.Value,
 			})
 
@@ -383,11 +350,11 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordCall) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateFunctionCall
-		parserState.ASTNodeCall = ASTNode{
-			Type: ASTNodeTypeFunctionCall,
+		parserState.ASTNodeCall = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeFunctionCall,
 		}
-		parserState.ASTNodeExpr = ASTNode{
-			Type: ASTNoteTypeExpression,
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
 		}
 		return true
 	}
@@ -395,8 +362,8 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 	// fire funcName(args)
 	if parserState.ProgramState == ProgramStateFunctionCall {
 		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsArgList {
-			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, ASTNode{
-				Type:  ASTNodeTypeIdentifier,
+			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeIdentifier,
 				Value: token.Value,
 			})
 
@@ -449,8 +416,8 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 		}
 
 		parserState.ProgramState = ProgramStateFunctionDeclaration
-		parserState.ASTNodeFunc = ASTNode{
-			Type: ASTNodeTypeFunctionDeclaration,
+		parserState.ASTNodeFunc = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeFunctionDeclaration,
 		}
 		parserState.ASTNodeParent = &parserState.ASTNodeFunc
 		return true
@@ -459,12 +426,12 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 	if parserState.ProgramState == ProgramStateFunctionDeclaration {
 		// args and function name
 		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsFuncBlock {
-			var identType = ASTNodeTypeIdentifier
+			var identType = genalphatypes.ASTNodeTypeIdentifier
 			if parserState.IsArgList {
-				identType = ASTNodeTypeFunctionArgument
+				identType = genalphatypes.ASTNodeTypeFunctionArgument
 			}
 
-			parserState.ASTNodeFunc.Children = append(parserState.ASTNodeFunc.Children, ASTNode{
+			parserState.ASTNodeFunc.Children = append(parserState.ASTNodeFunc.Children, genalphatypes.ASTNode{
 				Type:  identType,
 				Value: token.Value,
 			})
@@ -506,48 +473,48 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 
 func parseExpression(parserState *ParserState, token lexer.Token) bool {
 	if token.Type == lexer.TokenTypeIdentifier {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeIdentifier,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeIdentifier,
 			Value: token.Value,
 		})
 		return true
 	}
 
 	if token.Type == lexer.TokenTypeNumber {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeNumber,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeNumber,
 			Value: token.Value,
 		})
 		return true
 	}
 
 	if token.Type == lexer.TokenTypeString {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeString,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeString,
 			Value: token.Value,
 		})
 		return true
 	}
 
 	if token.Value == string(lexer.KeywordTrue) || token.Value == string(lexer.KeywordFalse) {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeBoolean,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
 			Value: token.Value,
 		})
 		return true
 	}
 
 	if token.Type == lexer.TokenTypeOperator {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeOperator,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeOperator,
 			Value: token.Value,
 		})
 		return true
 	}
 
 	if token.Type == lexer.TokenTypePunctuation && token.Value == "(" {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeBlock,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
 		})
 
@@ -555,8 +522,8 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	if token.Type == lexer.TokenTypePunctuation && token.Value == ")" {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
-			Type:  ASTNodeTypeBlock,
+		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
 		})
 
@@ -567,20 +534,19 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 }
 
 // makes it so its correct order of operations
-func fixExpression(expression *ASTNode) {
+func fixExpression(expression *genalphatypes.ASTNode) {
 	makeBlocks(expression)
-	// fix order of operations
 }
 
-func makeBlocks(expression *ASTNode) {
-	var block = ASTNode{
-		Type: ASTNodeTypeBlock,
+func makeBlocks(expression *genalphatypes.ASTNode) {
+	var block = genalphatypes.ASTNode{
+		Type: genalphatypes.ASTNodeTypeBlock,
 	}
 
 	// [ (, 1, +, (2, -, 20, ), ), +, 5 ]
 	//   ^                      ^
 	//   blockStart             i
-	// we replace the entire block with just a single ASTNode of type block
+	// we replace the entire block with just a single genalphatypes.ASTNode of type block
 	// so it becomes
 	// [ BLOCK, +, 5 ]
 	// and i and blockstart are reset to 0
@@ -589,11 +555,11 @@ func makeBlocks(expression *ASTNode) {
 	for i := 0; i < len(expression.Children); i++ {
 		switch expression.Children[i].Value {
 		case "(":
-			if expression.Children[i].Type == ASTNodeTypeBlock {
+			if expression.Children[i].Type == genalphatypes.ASTNodeTypeBlock {
 				stack = append(stack, i)
 			}
 		case ")":
-			if expression.Children[i].Type != ASTNodeTypeBlock {
+			if expression.Children[i].Type != genalphatypes.ASTNodeTypeBlock {
 				continue
 			}
 			if len(stack) == 0 {
@@ -609,8 +575,23 @@ func makeBlocks(expression *ASTNode) {
 			expression.Children = append(expression.Children, astCopy[i+1:]...)
 
 			makeBlocks(&block)
-			block = ASTNode{}
+			block = genalphatypes.ASTNode{}
 			i = blockStart // Reset i to blockStart to continue processing
 		}
+	}
+}
+
+func PrintAST(ast genalphatypes.ASTNode) {
+	fmt.Println("AST:")
+	printASTNode(ast, 0)
+}
+
+func printASTNode(ast genalphatypes.ASTNode, level int) {
+	for i := 0; i < level; i++ {
+		fmt.Print("  ")
+	}
+	fmt.Printf("%d: %s\n", ast.Type, ast.Value)
+	for _, child := range ast.Children {
+		printASTNode(child, level+1)
 	}
 }

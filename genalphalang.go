@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"bobik.squidwock.com/root/genalphalang/genalphalang/interpreter"
-	"bobik.squidwock.com/root/genalphalang/genalphalang/lexer"
-	"bobik.squidwock.com/root/genalphalang/genalphalang/parser"
-	"bobik.squidwock.com/root/genalphalang/genalphalang/utils"
+	"bobik.squidwock.com/root/genalphalang/genalpha/interpreter"
+	"bobik.squidwock.com/root/genalphalang/genalpha/lexer"
+	"bobik.squidwock.com/root/genalphalang/genalpha/parser"
+	"bobik.squidwock.com/root/genalphalang/genalpha/utils"
 )
 
 func main() {
