@@ -2,65 +2,12 @@ package lexer
 
 import (
 	"strings"
+
+	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
 )
 
-type TokenType int
-
-const (
-	TokenTypeIdentifier TokenType = iota
-	TokenTypeNumber
-	TokenTypeString
-	TokenTypeBoolean
-	TokenTypeKeyword
-	TokenTypeOperator
-	TokenTypePunctuation
-	TokenTypeComment
-	TokenTypeWhitespace
-	TokenTypeNewline
-	TokenTypeUnknown
-)
-
-type Keyword string
-
-const (
-	KeywordNamespace Keyword = "land"
-	KeywordVar       Keyword = "fax"
-	KeywordIf        Keyword = "skibidi"
-	KeywordIfYes     Keyword = "yeah"
-	KeywordIfNo      Keyword = "nah"
-	KeywordFunc      Keyword = "lowkey"
-	KeywordEnd       Keyword = "end"
-	KeywordCall      Keyword = "fire"
-	KeywordWhile     Keyword = "yap"
-	KeywordImport    Keyword = "gyat"
-	KeywordReturn    Keyword = "rizzult"
-	KeywordTrue      Keyword = "yay"
-	KeywordFalse     Keyword = "nay"
-)
-
-var (
-	Keywords = []string{
-		string(KeywordVar),
-		string(KeywordIf),
-		string(KeywordIfYes),
-		string(KeywordIfNo),
-		string(KeywordFunc),
-		string(KeywordEnd),
-		string(KeywordCall),
-		string(KeywordWhile),
-		string(KeywordImport),
-		string(KeywordReturn),
-	}
-)
-
-type Token struct {
-	Type  TokenType
-	Value string
-	Line  int
-}
-
-func Lex(contents string, filename string) []Token {
-	var tokens []Token
+func Lex(contents string, filename string) []genalphatypes.Token {
+	var tokens []genalphatypes.Token
 
 	for i, line := range strings.Split(contents, "\n") {
 		line = strings.ReplaceAll(line, "\r", "") // windows line endings
@@ -75,8 +22,8 @@ func Lex(contents string, filename string) []Token {
 		}
 
 		tokens = append(tokens, lexLine(line, i)...)
-		tokens = append(tokens, Token{
-			Type:  TokenTypeNewline,
+		tokens = append(tokens, genalphatypes.Token{
+			Type:  genalphatypes.TokenTypeNewline,
 			Value: "\n",
 			Line:  i,
 		})
@@ -86,8 +33,8 @@ func Lex(contents string, filename string) []Token {
 }
 
 // todo escaped characters in strings
-func lexLine(line string, lineNum int) []Token {
-	var tokens []Token
+func lexLine(line string, lineNum int) []genalphatypes.Token {
+	var tokens []genalphatypes.Token
 
 	var tokenStart int
 	var inString bool
@@ -115,8 +62,8 @@ func lexLine(line string, lineNum int) []Token {
 
 		if inString {
 			if char == '"' {
-				tokens = append(tokens, Token{
-					Type:  TokenTypeString,
+				tokens = append(tokens, genalphatypes.Token{
+					Type:  genalphatypes.TokenTypeString,
 					Value: line[tokenStart : i+1],
 					Line:  lineNum,
 				})
@@ -136,8 +83,8 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		if char == '`' {
-			tokens = append(tokens, Token{
-				Type:  TokenTypeComment,
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypeComment,
 				Value: line[i:],
 				Line:  lineNum,
 			})
@@ -150,8 +97,8 @@ func lexLine(line string, lineNum int) []Token {
 				continue
 			}
 
-			tokens = append(tokens, Token{
-				Type:  TokenTypeWhitespace,
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypeWhitespace,
 				Value: string(line[i]),
 				Line:  lineNum,
 			})
@@ -161,8 +108,8 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		if char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == ',' || char == ';' {
-			tokens = append(tokens, Token{
-				Type:  TokenTypePunctuation,
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypePunctuation,
 				Value: string(char),
 				Line:  lineNum,
 			})
@@ -184,8 +131,8 @@ func lexLine(line string, lineNum int) []Token {
 					continue
 				}
 
-				tokens = append(tokens, Token{
-					Type:  TokenTypeNumber,
+				tokens = append(tokens, genalphatypes.Token{
+					Type:  genalphatypes.TokenTypeNumber,
 					Value: line[i:j],
 					Line:  lineNum,
 				})
@@ -196,8 +143,8 @@ func lexLine(line string, lineNum int) []Token {
 			}
 
 			if !added {
-				tokens = append(tokens, Token{
-					Type:  TokenTypeNumber,
+				tokens = append(tokens, genalphatypes.Token{
+					Type:  genalphatypes.TokenTypeNumber,
 					Value: line[i:],
 					Line:  lineNum,
 				})
@@ -209,8 +156,8 @@ func lexLine(line string, lineNum int) []Token {
 		}
 
 		if char == '+' || char == '-' || char == '*' || char == '/' || char == '%' || char == '=' || char == '!' || char == '<' || char == '>' || char == '&' || char == '|' || char == '^' || char == '.' {
-			tokens = append(tokens, Token{
-				Type:  TokenTypeOperator,
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypeOperator,
 				Value: string(char),
 				Line:  lineNum,
 			})
@@ -219,10 +166,10 @@ func lexLine(line string, lineNum int) []Token {
 			continue
 		}
 
-		keyword := fromIndexContainsAny(line, i, Keywords)
+		keyword := fromIndexContainsAny(line, i, genalphatypes.Keywords)
 		if keyword != "" {
-			tokens = append(tokens, Token{
-				Type:  TokenTypeKeyword,
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypeKeyword,
 				Value: keyword,
 				Line:  lineNum,
 			})
@@ -244,8 +191,8 @@ func lexLine(line string, lineNum int) []Token {
 					continue
 				}
 
-				tokens = append(tokens, Token{
-					Type:  TokenTypeIdentifier,
+				tokens = append(tokens, genalphatypes.Token{
+					Type:  genalphatypes.TokenTypeIdentifier,
 					Value: line[i:j],
 					Line:  lineNum,
 				})
@@ -256,8 +203,8 @@ func lexLine(line string, lineNum int) []Token {
 			}
 
 			if !added {
-				tokens = append(tokens, Token{
-					Type:  TokenTypeIdentifier,
+				tokens = append(tokens, genalphatypes.Token{
+					Type:  genalphatypes.TokenTypeIdentifier,
 					Value: line[i:],
 					Line:  lineNum,
 				})

@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
-	"bobik.squidwock.com/root/genalphalang/genalpha/lexer"
 )
 
 type ProgramState int
@@ -46,7 +45,7 @@ type ParserState struct {
 }
 
 // just a huge state machine
-func Parse(tokens []lexer.Token) genalphatypes.ASTNode {
+func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 	var parserState = ParserState{
 		ProgramState: ProgramStateNormal,
 		ASTRoot: genalphatypes.ASTNode{
@@ -82,36 +81,36 @@ func Parse(tokens []lexer.Token) genalphatypes.ASTNode {
 	}
 
 	for _, token := range tokens {
-		if token.Type == lexer.TokenTypeWhitespace || token.Type == lexer.TokenTypeComment {
+		if token.Type == genalphatypes.TokenTypeWhitespace || token.Type == genalphatypes.TokenTypeComment {
 			continue
 		}
 
-		if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordIf) {
+		if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordIf) {
 			parserState.DeclarationCount++
 		}
-		if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordWhile) {
+		if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordWhile) {
 			parserState.DeclarationCount++
 		}
-		if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordFunc) {
+		if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordFunc) {
 			parserState.DeclarationCount++
 		}
-		if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordEnd) {
+		if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordEnd) {
 			parserState.DeclarationCount--
 		}
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "(" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "(" {
 			parserState.OpenBrackets++
 		}
-		if token.Type == lexer.TokenTypePunctuation && token.Value == ")" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == ")" {
 			parserState.OpenBrackets--
 		}
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "{" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "{" {
 			parserState.OpenCurly++
 		}
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "}" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "}" {
 			parserState.OpenCurly--
 		}
 
-		if token.Type == lexer.TokenTypeNewline {
+		if token.Type == genalphatypes.TokenTypeNewline {
 			parserState.Line++
 
 			if parserState.OpenBrackets != 0 {
@@ -161,8 +160,8 @@ func Parse(tokens []lexer.Token) genalphatypes.ASTNode {
 	return parserState.ASTRoot
 }
 
-func parseAssignment(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeIdentifier && parserState.ProgramState == ProgramStateNormal {
+func parseAssignment(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeIdentifier && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableAssignment
 		parserState.ASTNodeExpr = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNoteTypeExpression,
@@ -178,12 +177,12 @@ func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	if parserState.ProgramState == ProgramStateVariableAssignment {
-		if token.Type == lexer.TokenTypeOperator && token.Value == "=" && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeOperator && token.Value == "=" && !parserState.IsArgList {
 			parserState.IsArgList = true
 			return true
 		}
 
-		if token.Type == lexer.TokenTypeNewline && parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeNewline && parserState.IsArgList {
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeAssign.Children = append(parserState.ASTNodeAssign.Children, parserState.ASTNodeExpr)
 
@@ -203,8 +202,8 @@ func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
-func parseImport(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordImport) && parserState.ProgramState == ProgramStateNormal {
+func parseImport(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordImport) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateImport
 		parserState.ASTNodeImport = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeImport,
@@ -213,7 +212,7 @@ func parseImport(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	if parserState.ProgramState == ProgramStateImport {
-		if token.Type == lexer.TokenTypeString {
+		if token.Type == genalphatypes.TokenTypeString {
 			parserState.ASTNodeImport.Children = append(parserState.ASTNodeImport.Children, genalphatypes.ASTNode{
 				Type:  genalphatypes.ASTNodeTypeString,
 				Value: token.Value,
@@ -227,13 +226,13 @@ func parseImport(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
-func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
-	if (token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordIf) && parserState.ProgramState == ProgramStateNormal) ||
-		(token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordWhile) && parserState.ProgramState == ProgramStateNormal) {
+func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
+	if (token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordIf) && parserState.ProgramState == ProgramStateNormal) ||
+		(token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordWhile) && parserState.ProgramState == ProgramStateNormal) {
 		parserState.ASTNodeStack = append(parserState.ASTNodeStack, parserState.ASTNodeParent)
 		var nodeType = genalphatypes.ASTNodeTypeIf
 		var programState = ProgramStateIf
-		if token.Value == string(lexer.KeywordWhile) {
+		if token.Value == string(genalphatypes.KeywordWhile) {
 			nodeType = genalphatypes.ASTNodeTypeWhile
 			programState = ProgramStateWhile
 		}
@@ -249,7 +248,7 @@ func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	if parserState.ProgramState == ProgramStateIf || parserState.ProgramState == ProgramStateWhile {
-		if token.Type == lexer.TokenTypeNewline {
+		if token.Type == genalphatypes.TokenTypeNewline {
 			// append expression
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeExpr)
@@ -272,8 +271,8 @@ func parseIfWhile(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
-func parseReturn(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordReturn) && parserState.ProgramState == ProgramStateNormal {
+func parseReturn(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordReturn) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateReturn
 		parserState.ASTNodeExpr = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNoteTypeExpression,
@@ -285,7 +284,7 @@ func parseReturn(parserState *ParserState, token lexer.Token) bool {
 	}
 
 	if parserState.ProgramState == ProgramStateReturn {
-		if token.Type == lexer.TokenTypeNewline {
+		if token.Type == genalphatypes.TokenTypeNewline {
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeReturn.Children = append(parserState.ASTNodeReturn.Children, parserState.ASTNodeExpr)
 			parserState.ProgramState = ProgramStateNormal
@@ -300,8 +299,8 @@ func parseReturn(parserState *ParserState, token lexer.Token) bool {
 	return false
 }
 
-func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordVar) && parserState.ProgramState == ProgramStateNormal {
+func parseVariableDeclaration(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordVar) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableDeclaration
 		parserState.ASTNodeExpr = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNoteTypeExpression,
@@ -314,7 +313,7 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 
 	if parserState.ProgramState == ProgramStateVariableDeclaration {
 		/// fmt.Println(parserState.ASTNodeDecl)
-		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsArgList {
 			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, genalphatypes.ASTNode{
 				Type:  genalphatypes.ASTNodeTypeIdentifier,
 				Value: token.Value,
@@ -323,12 +322,12 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 			return true
 		}
 
-		if token.Type == lexer.TokenTypeOperator && token.Value == "=" && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeOperator && token.Value == "=" && !parserState.IsArgList {
 			parserState.IsArgList = true
 			return true
 		}
 
-		if token.Type == lexer.TokenTypeNewline && parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeNewline && parserState.IsArgList {
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, parserState.ASTNodeExpr)
 
@@ -347,8 +346,8 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 	return false
 }
 
-func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordCall) && parserState.ProgramState == ProgramStateNormal {
+func parseFunctionCall(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordCall) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateFunctionCall
 		parserState.ASTNodeCall = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeFunctionCall,
@@ -361,7 +360,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 
 	// fire funcName(args)
 	if parserState.ProgramState == ProgramStateFunctionCall {
-		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsArgList {
 			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, genalphatypes.ASTNode{
 				Type:  genalphatypes.ASTNodeTypeIdentifier,
 				Value: token.Value,
@@ -371,7 +370,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 		}
 
 		// before args because we want to be able to end
-		if token.Type == lexer.TokenTypePunctuation && token.Value == ")" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == ")" {
 			// append last arg
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, parserState.ASTNodeExpr)
@@ -384,7 +383,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 
 		// args could be expressions
 		if parserState.IsArgList {
-			if token.Type == lexer.TokenTypePunctuation && token.Value == "," {
+			if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "," {
 				if parserState.ASTNodeExpr.Type == 0 {
 					panic("PARSER: Expected expression")
 				}
@@ -399,7 +398,7 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 		}
 
 		// end of args
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "(" && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "(" && !parserState.IsArgList {
 			parserState.IsArgList = true
 			return true
 		}
@@ -409,8 +408,8 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 }
 
 // handles only function declaration: args, identity of func and end and pushes to AST root
-func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordFunc) && parserState.ProgramState == ProgramStateNormal {
+func parseFunctionDeclarationLogic(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordFunc) && parserState.ProgramState == ProgramStateNormal {
 		if parserState.DeclarationCount != 1 {
 			panic("PARSER: Function declaration should be on top level")
 		}
@@ -425,7 +424,7 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 
 	if parserState.ProgramState == ProgramStateFunctionDeclaration {
 		// args and function name
-		if token.Type == lexer.TokenTypeIdentifier && !parserState.IsFuncBlock {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsFuncBlock {
 			var identType = genalphatypes.ASTNodeTypeIdentifier
 			if parserState.IsArgList {
 				identType = genalphatypes.ASTNodeTypeFunctionArgument
@@ -440,11 +439,11 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 			return true
 		}
 
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "{" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "{" {
 			return true
 		}
 
-		if token.Type == lexer.TokenTypePunctuation && token.Value == "}" {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "}" {
 			if parserState.OpenCurly == 0 {
 				parserState.IsArgList = false
 				parserState.IsFuncBlock = true
@@ -458,7 +457,7 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 	// end
 	if parserState.IsFuncBlock {
 		if parserState.DeclarationCount == 0 { // only when we sure its end of function
-			if token.Type == lexer.TokenTypeKeyword && token.Value == string(lexer.KeywordEnd) {
+			if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordEnd) {
 				parserState.ProgramState = ProgramStateNormal
 				parserState.IsArgList = false
 				parserState.IsFuncBlock = false
@@ -471,8 +470,8 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 	return false
 }
 
-func parseExpression(parserState *ParserState, token lexer.Token) bool {
-	if token.Type == lexer.TokenTypeIdentifier {
+func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeIdentifier {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeIdentifier,
 			Value: token.Value,
@@ -480,7 +479,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Type == lexer.TokenTypeNumber {
+	if token.Type == genalphatypes.TokenTypeNumber {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeNumber,
 			Value: token.Value,
@@ -488,7 +487,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Type == lexer.TokenTypeString {
+	if token.Type == genalphatypes.TokenTypeString {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeString,
 			Value: token.Value,
@@ -496,7 +495,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Value == string(lexer.KeywordTrue) || token.Value == string(lexer.KeywordFalse) {
+	if token.Value == string(genalphatypes.KeywordTrue) || token.Value == string(genalphatypes.KeywordFalse) {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBoolean,
 			Value: token.Value,
@@ -504,7 +503,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Type == lexer.TokenTypeOperator {
+	if token.Type == genalphatypes.TokenTypeOperator {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeOperator,
 			Value: token.Value,
@@ -512,7 +511,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Type == lexer.TokenTypePunctuation && token.Value == "(" {
+	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "(" {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
@@ -521,7 +520,7 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		return true
 	}
 
-	if token.Type == lexer.TokenTypePunctuation && token.Value == ")" {
+	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == ")" {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
