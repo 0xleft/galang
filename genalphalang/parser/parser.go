@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"slices"
 
 	"bobik.squidwock.com/root/genalphalang/genalphalang/lexer"
 )
@@ -31,13 +32,13 @@ const (
 	ASTNodeTypeIndex
 	ASTNodeTypeMemberAccess
 	ASTNodeTypeBlock
+	ASTNodeTypeBlockPriv
 )
 
 type ASTNode struct {
 	Type     ASTNodeType
 	Children []ASTNode
 	Value    string
-	Line     int
 }
 
 type ProgramState int
@@ -205,7 +206,6 @@ func parseAssignment(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeAssign.Children = append(parserState.ASTNodeAssign.Children, ASTNode{
 			Type:  ASTNodeTypeIdentifier,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -250,7 +250,6 @@ func parseImport(parserState *ParserState, token lexer.Token) bool {
 			parserState.ASTNodeImport.Children = append(parserState.ASTNodeImport.Children, ASTNode{
 				Type:  ASTNodeTypeString,
 				Value: token.Value,
-				Line:  parserState.Line,
 			})
 			parserState.ProgramState = ProgramStateNormal
 			parserState.ASTRoot.Children = append(parserState.ASTRoot.Children, parserState.ASTNodeImport)
@@ -352,7 +351,6 @@ func parseVariableDeclaration(parserState *ParserState, token lexer.Token) bool 
 			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, ASTNode{
 				Type:  ASTNodeTypeIdentifier,
 				Value: token.Value,
-				Line:  parserState.Line,
 			})
 
 			return true
@@ -400,7 +398,6 @@ func parseFunctionCall(parserState *ParserState, token lexer.Token) bool {
 			parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, ASTNode{
 				Type:  ASTNodeTypeIdentifier,
 				Value: token.Value,
-				Line:  parserState.Line,
 			})
 
 			return true
@@ -470,7 +467,6 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token lexer.Token) 
 			parserState.ASTNodeFunc.Children = append(parserState.ASTNodeFunc.Children, ASTNode{
 				Type:  identType,
 				Value: token.Value,
-				Line:  parserState.Line,
 			})
 
 			parserState.IsArgList = true
@@ -513,7 +509,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeIdentifier,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -522,7 +517,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeNumber,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -531,7 +525,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeString,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -540,7 +533,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeBoolean,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -549,7 +541,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeOperator,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 		return true
 	}
@@ -558,7 +549,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeBlock,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 
 		return true
@@ -568,7 +558,6 @@ func parseExpression(parserState *ParserState, token lexer.Token) bool {
 		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, ASTNode{
 			Type:  ASTNodeTypeBlock,
 			Value: token.Value,
-			Line:  parserState.Line,
 		})
 
 		return true
@@ -583,52 +572,45 @@ func fixExpression(expression *ASTNode) {
 	// fix order of operations
 }
 
-func deepCopyASTNode(node ASTNode) ASTNode {
-	copyNode := node
-	copyNode.Children = make([]ASTNode, len(node.Children))
-	for i, child := range node.Children {
-		copyNode.Children[i] = deepCopyASTNode(child)
-	}
-	return copyNode
-}
-
 func makeBlocks(expression *ASTNode) {
 	var block = ASTNode{
 		Type: ASTNodeTypeBlock,
 	}
-	var blockCount = 0
-	var blockStart = 0
 
-	var i = 0
-	for {
-		if i >= len(expression.Children) {
-			break
-		}
+	// [ (, 1, +, (2, -, 20, ), ), +, 5 ]
+	//   ^                      ^
+	//   blockStart             i
+	// we replace the entire block with just a single ASTNode of type block
+	// so it becomes
+	// [ BLOCK, +, 5 ]
+	// and i and blockstart are reset to 0
 
-		if expression.Children[i].Type == ASTNodeTypeBlock && expression.Children[i].Value == "(" {
-			if blockCount == 0 {
-				blockStart = i
+	stack := []int{} // stack of indexes of "("
+	for i := 0; i < len(expression.Children); i++ {
+		switch expression.Children[i].Value {
+		case "(":
+			if expression.Children[i].Type == ASTNodeTypeBlock {
+				stack = append(stack, i)
 			}
-			blockCount++
-		}
-
-		if expression.Children[i].Type == ASTNodeTypeBlock && expression.Children[i].Value == ")" {
-			blockCount--
-			if blockCount == 0 {
-				var astCopy = make([]ASTNode, len(expression.Children))
-				for j, node := range expression.Children {
-					astCopy[j] = deepCopyASTNode(node)
-				}
-
-				block.Children = astCopy[blockStart+1 : i]
-				expression.Children = append(expression.Children[:blockStart], block)
-				expression.Children = append(expression.Children, astCopy[i+1:]...)
-
-				i = blockStart
-				makeBlocks(&block)
+		case ")":
+			if expression.Children[i].Type != ASTNodeTypeBlock {
+				continue
 			}
-		}
+			if len(stack) == 0 {
+				continue
+			}
+			blockStart := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
 
-		i++
+			var astCopy = slices.Clone(expression.Children)
+			block.Children = astCopy[blockStart+1 : i]
+
+			expression.Children = append(expression.Children[:blockStart], block)
+			expression.Children = append(expression.Children, astCopy[i+1:]...)
+
+			makeBlocks(&block)
+			block = ASTNode{}
+			i = blockStart // Reset i to blockStart to continue processing
+		}
 	}
 }
