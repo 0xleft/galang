@@ -53,7 +53,6 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 		}
 
 		char = line[i]
-		// fmt.Println(string(char), i, line)
 
 		if inComment {
 			i++

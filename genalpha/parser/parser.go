@@ -175,8 +175,6 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 		panic("PARSER: Mismatched declarations, meaning you are missing end somewhere")
 	}
 
-	PrintAST(parserState.ASTRoot, 0)
-
 	return parserState.ASTRoot
 }
 
@@ -432,7 +430,6 @@ func parseVariableDeclaration(parserState *ParserState, token genalphatypes.Toke
 	}
 
 	if parserState.ProgramState == ProgramStateVariableDeclaration {
-		/// fmt.Println(parserState.ASTNodeDecl)
 		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsArgList {
 			parserState.ASTNodeDecl.Children = append(parserState.ASTNodeDecl.Children, genalphatypes.ASTNode{
 				Type:  genalphatypes.ASTNodeTypeIdentifier,
@@ -694,7 +691,6 @@ func fixOperators(expression *genalphatypes.ASTNode) {
 
 		i++
 	}
-	fmt.Println(expression)
 }
 
 func makeBlocks(expression *genalphatypes.ASTNode) {
