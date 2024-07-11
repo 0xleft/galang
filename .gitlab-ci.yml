@@ -6,7 +6,7 @@ variables:
   GITHUB_MIRROR_TOKEN:
     description: "GitHub token for mirroring"
   GITHUB_MIRROR_URL: 
-    value: github.com/0xleft/genalphalang.git
+    value: github.com/0xleft/gal.git
     description: "GitHub URL for mirroring"
 
 default:
