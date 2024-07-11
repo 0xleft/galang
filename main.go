@@ -11,11 +11,6 @@ import (
 )
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Execution failed: ", r)
-		}
-	}()
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: genalphalang <filename>")

@@ -9,7 +9,6 @@ const (
 	ASTNodeTypeFunctionCall
 	ASTNodeTypeVariableDeclaration
 	ASTNodeTypeVariableAssignment
-	ASTNoteTypeExpression
 	ASTNodeTypeIf
 	ASTNodeTypeImport
 	ASTNodeTypeWhile
@@ -23,7 +22,8 @@ const (
 	ASTNodeTypeBoolean
 	ASTNodeTypeNone
 	ASTNodeTypeFunctionArgument
-	ASTNodeTypeMemberAccessAssignment
+	ASTNodeTypeMemberAssignment
+	ASTNodeTypeMemberAccess
 	ASTNodeTypeBlock
 )
 

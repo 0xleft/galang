@@ -20,30 +20,34 @@ const (
 	ProgramStateReturn
 	ProgramStateImport
 	ProgramStateMemberAccess
+	ProgramStateMemberAssign
 )
 
 type ParserState struct {
-	ProgramState        ProgramState
-	Line                int
-	TokenIndex          int
-	OpenBrackets        int
-	OpenCurly           int
-	DeclarationCount    int  // loops, if, function
-	IsMemberAccessExpr  bool // only used for member access expression
-	IsArgList           bool
-	IsFuncBlock         bool
-	ASTNodeFunc         genalphatypes.ASTNode // for constructing function declaration
-	ASTNodeCall         genalphatypes.ASTNode // for constructing function call
-	ASTNodeExpr         genalphatypes.ASTNode // for constructing expressions
-	ASTRoot             genalphatypes.ASTNode
-	ASTNodeDecl         genalphatypes.ASTNode
-	ASTNodeAssign       genalphatypes.ASTNode
-	ASTNodeReturn       genalphatypes.ASTNode
-	ASTNodeImport       genalphatypes.ASTNode
-	ASTNodeMemberAccess genalphatypes.ASTNode
-	ASTNodeNamespace    genalphatypes.ASTNode
-	ASTNodeParent       *genalphatypes.ASTNode   // for nested blocks
-	ASTNodeStack        []*genalphatypes.ASTNode // for nested blocks too
+	ProgramState            ProgramState
+	PreviousState           ProgramState
+	Line                    int
+	TokenIndex              int
+	OpenBrackets            int
+	OpenCurly               int
+	DeclarationCount        int  // loops, if, function
+	IsMemberAccessExpr      bool // only used for member access expression
+	IsArgList               bool
+	IsFuncBlock             bool
+	ASTNodeFunc             genalphatypes.ASTNode // for constructing function declaration
+	ASTNodeCall             genalphatypes.ASTNode // for constructing function call
+	ASTNodeExpr             genalphatypes.ASTNode // for constructing expressions
+	ASTRoot                 genalphatypes.ASTNode
+	ASTNodeDecl             genalphatypes.ASTNode
+	ASTNodeAssign           genalphatypes.ASTNode
+	ASTNodeReturn           genalphatypes.ASTNode
+	ASTNodeImport           genalphatypes.ASTNode
+	ASTNodeMemberAccess     genalphatypes.ASTNode
+	ASTNodeMemberAccessExpr genalphatypes.ASTNode
+	ASTNodeMemberAssign     genalphatypes.ASTNode
+	ASTNodeNamespace        genalphatypes.ASTNode
+	ASTNodeParent           *genalphatypes.ASTNode   // for nested blocks
+	ASTNodeStack            []*genalphatypes.ASTNode // for nested blocks too
 }
 
 // just a huge state machine
@@ -75,7 +79,10 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 			Type: genalphatypes.ASTNodeTypeImport,
 		},
 		ASTNodeMemberAccess: genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNodeTypeMemberAccessAssignment,
+			Type: genalphatypes.ASTNodeTypeMemberAccess,
+		},
+		ASTNodeMemberAssign: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeMemberAssignment,
 		},
 		ASTNodeNamespace: genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeIdentifier,
@@ -123,6 +130,12 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 			}
 		}
 
+		if parserState.IsArgList {
+			if parseMemberAccess(&parserState, token) {
+				continue
+			}
+		}
+
 		if parseFunctionDeclarationLogic(&parserState, token) {
 			continue
 		}
@@ -151,7 +164,7 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 			continue
 		}
 
-		if parseMemberAccessAssignment(&parserState, token) {
+		if parseMemberAssignment(&parserState, token) {
 			continue
 		}
 
@@ -167,29 +180,75 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 	return parserState.ASTRoot
 }
 
-func parseMemberAccessAssignment(parserState *ParserState, token genalphatypes.Token) bool {
-	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "[" && parserState.ProgramState == ProgramStateNormal {
+// todo
+func resetExpression(parserState *ParserState) {
+	parserState.ASTNodeExpr = genalphatypes.ASTNode{
+		Type: genalphatypes.ASTNodeTypeExpression,
+	}
+}
+
+func parseMemberAccess(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "[" {
+		parserState.PreviousState = parserState.ProgramState
 		parserState.ProgramState = ProgramStateMemberAccess
 		parserState.ASTNodeMemberAccess = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNodeTypeMemberAccessAssignment,
+			Type: genalphatypes.ASTNodeTypeMemberAccess,
 		}
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
+		parserState.ASTNodeMemberAccessExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeExpression,
 		}
 		return true
 	}
 
 	if parserState.ProgramState == ProgramStateMemberAccess {
-		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsMemberAccessExpr && !parserState.IsArgList {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsMemberAccessExpr {
 			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, genalphatypes.ASTNode{
 				Type:  genalphatypes.ASTNodeTypeIdentifier,
 				Value: token.Value,
 			})
 
+			parserState.IsMemberAccessExpr = true
+
 			return true
 		}
 
-		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "," && !parserState.IsArgList && !parserState.IsMemberAccessExpr {
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "]" {
+			fixExpression(&parserState.ASTNodeMemberAccessExpr)
+			parserState.ProgramState = parserState.PreviousState
+			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, parserState.ASTNodeMemberAccessExpr)
+			parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, parserState.ASTNodeMemberAccess)
+
+			parserState.IsMemberAccessExpr = false
+
+			return false
+		}
+
+		if parserState.IsArgList {
+			parseExpression(parserState, token, &parserState.ASTNodeMemberAccessExpr)
+			return true
+		}
+	}
+
+	return false
+}
+
+func parseMemberAssignment(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "[" && parserState.ProgramState == ProgramStateNormal {
+		parserState.ProgramState = ProgramStateMemberAssign
+		parserState.ASTNodeMemberAssign = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeMemberAssignment,
+		}
+		resetExpression(parserState)
+		return true
+	}
+
+	if parserState.ProgramState == ProgramStateMemberAssign {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsMemberAccessExpr && !parserState.IsArgList {
+			parserState.ASTNodeMemberAssign.Children = append(parserState.ASTNodeMemberAssign.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeIdentifier,
+				Value: token.Value,
+			})
+
 			parserState.IsMemberAccessExpr = true
 			return true
 		}
@@ -201,11 +260,9 @@ func parseMemberAccessAssignment(parserState *ParserState, token genalphatypes.T
 
 		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "]" {
 			fixExpression(&parserState.ASTNodeExpr)
-			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, parserState.ASTNodeExpr)
+			parserState.ASTNodeMemberAssign.Children = append(parserState.ASTNodeMemberAssign.Children, parserState.ASTNodeExpr)
 
-			parserState.ASTNodeExpr = genalphatypes.ASTNode{
-				Type: genalphatypes.ASTNoteTypeExpression,
-			}
+			resetExpression(parserState)
 
 			parserState.IsMemberAccessExpr = false
 
@@ -214,16 +271,16 @@ func parseMemberAccessAssignment(parserState *ParserState, token genalphatypes.T
 
 		if token.Type == genalphatypes.TokenTypeNewline && parserState.IsArgList {
 			fixExpression(&parserState.ASTNodeExpr)
-			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, parserState.ASTNodeExpr)
+			parserState.ASTNodeMemberAssign.Children = append(parserState.ASTNodeMemberAssign.Children, parserState.ASTNodeExpr)
 
 			parserState.ProgramState = ProgramStateNormal
 			parserState.IsArgList = false
-			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeMemberAccess)
+			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeMemberAssign)
 			return true
 		}
 
 		if parserState.IsArgList || parserState.IsMemberAccessExpr {
-			parseExpression(parserState, token)
+			parseExpression(parserState, token, nil)
 			return true
 		}
 	}
@@ -234,9 +291,7 @@ func parseMemberAccessAssignment(parserState *ParserState, token genalphatypes.T
 func parseAssignment(parserState *ParserState, token genalphatypes.Token) bool {
 	if token.Type == genalphatypes.TokenTypeIdentifier && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableAssignment
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
-		}
+		resetExpression(parserState)
 		parserState.ASTNodeAssign = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeVariableAssignment,
 		}
@@ -264,7 +319,7 @@ func parseAssignment(parserState *ParserState, token genalphatypes.Token) bool {
 		}
 
 		if parserState.IsArgList {
-			parseExpression(parserState, token)
+			parseExpression(parserState, token, nil)
 			return true
 		}
 	}
@@ -309,9 +364,7 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 		parserState.ASTNodeParent = &genalphatypes.ASTNode{
 			Type: nodeType,
 		}
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
-		}
+		resetExpression(parserState)
 		parserState.ProgramState = programState
 		parserState.IsArgList = true
 		return true
@@ -323,6 +376,7 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeExpr)
 			// append if block to parent
+
 			parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children = append(parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children, *parserState.ASTNodeParent)
 			parserState.ASTNodeParent = parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1]
 			parserState.ASTNodeStack = parserState.ASTNodeStack[:len(parserState.ASTNodeStack)-1]
@@ -333,7 +387,7 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 		}
 
 		if parserState.IsArgList {
-			parseExpression(parserState, token)
+			parseExpression(parserState, token, nil)
 			return true
 		}
 	}
@@ -344,9 +398,7 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 func parseReturn(parserState *ParserState, token genalphatypes.Token) bool {
 	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordReturn) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateReturn
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
-		}
+		resetExpression(parserState)
 		parserState.ASTNodeReturn = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeReturn,
 		}
@@ -362,7 +414,7 @@ func parseReturn(parserState *ParserState, token genalphatypes.Token) bool {
 			return true
 		}
 
-		parseExpression(parserState, token)
+		parseExpression(parserState, token, nil)
 		return true
 	}
 
@@ -372,9 +424,7 @@ func parseReturn(parserState *ParserState, token genalphatypes.Token) bool {
 func parseVariableDeclaration(parserState *ParserState, token genalphatypes.Token) bool {
 	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordVar) && parserState.ProgramState == ProgramStateNormal {
 		parserState.ProgramState = ProgramStateVariableDeclaration
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
-		}
+		resetExpression(parserState)
 		parserState.ASTNodeDecl = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeVariableDeclaration,
 		}
@@ -408,7 +458,7 @@ func parseVariableDeclaration(parserState *ParserState, token genalphatypes.Toke
 		}
 
 		if parserState.IsArgList {
-			parseExpression(parserState, token)
+			parseExpression(parserState, token, nil)
 			return true
 		}
 	}
@@ -422,9 +472,7 @@ func parseFunctionCall(parserState *ParserState, token genalphatypes.Token) bool
 		parserState.ASTNodeCall = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeFunctionCall,
 		}
-		parserState.ASTNodeExpr = genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNoteTypeExpression,
-		}
+		resetExpression(parserState)
 		return true
 	}
 
@@ -462,7 +510,7 @@ func parseFunctionCall(parserState *ParserState, token genalphatypes.Token) bool
 				return true
 			}
 
-			parseExpression(parserState, token)
+			parseExpression(parserState, token, nil)
 
 			return true
 		}
@@ -540,9 +588,14 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token genalphatypes
 	return false
 }
 
-func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
+func parseExpression(parserState *ParserState, token genalphatypes.Token, expression *genalphatypes.ASTNode) bool {
+	var exprNode = &parserState.ASTNodeExpr
+	if expression != nil {
+		exprNode = expression
+	}
+
 	if token.Type == genalphatypes.TokenTypeIdentifier {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeIdentifier,
 			Value: token.Value,
 		})
@@ -550,7 +603,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypeNumber {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeNumber,
 			Value: token.Value,
 		})
@@ -558,7 +611,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordNone) {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: token.Value,
 		})
@@ -566,7 +619,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypeString {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeString,
 			Value: token.Value,
 		})
@@ -574,7 +627,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Value == string(genalphatypes.KeywordTrue) || token.Value == string(genalphatypes.KeywordFalse) {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBoolean,
 			Value: token.Value,
 		})
@@ -582,7 +635,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypeOperator {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeOperator,
 			Value: token.Value,
 		})
@@ -590,7 +643,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "(" {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
 		})
@@ -599,7 +652,7 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 	}
 
 	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == ")" {
-		parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, genalphatypes.ASTNode{
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeBlock,
 			Value: token.Value,
 		})
@@ -641,7 +694,6 @@ func fixOperators(expression *genalphatypes.ASTNode) {
 
 		i++
 	}
-
 	fmt.Println(expression)
 }
 
@@ -728,6 +780,10 @@ func orderOperations(expression *genalphatypes.ASTNode) {
 
 			i = 0
 			operationType++
+
+			if i >= len(expression.Children) {
+				break
+			}
 		}
 
 		if expression.Children[i].Type == genalphatypes.ASTNodeTypeBlock {
