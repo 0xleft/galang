@@ -23,8 +23,7 @@ const (
 	ASTNodeTypeBoolean
 	ASTNodeTypeNone
 	ASTNodeTypeFunctionArgument
-	ASTNodeTypeIndex
-	ASTNodeTypeMemberAccess
+	ASTNodeTypeMemberAccessAssignment
 	ASTNodeTypeBlock
 )
 

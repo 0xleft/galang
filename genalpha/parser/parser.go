@@ -19,6 +19,7 @@ const (
 	ProgramStateWhile
 	ProgramStateReturn
 	ProgramStateImport
+	ProgramStateMemberAccess
 )
 
 type ParserState struct {
@@ -27,7 +28,8 @@ type ParserState struct {
 	TokenIndex          int
 	OpenBrackets        int
 	OpenCurly           int
-	DeclarationCount    int // loops, if, function
+	DeclarationCount    int  // loops, if, function
+	IsMemberAccessExpr  bool // only used for member access expression
 	IsArgList           bool
 	IsFuncBlock         bool
 	ASTNodeFunc         genalphatypes.ASTNode // for constructing function declaration
@@ -73,7 +75,7 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 			Type: genalphatypes.ASTNodeTypeImport,
 		},
 		ASTNodeMemberAccess: genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNodeTypeMemberAccess,
+			Type: genalphatypes.ASTNodeTypeMemberAccessAssignment,
 		},
 		ASTNodeNamespace: genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeIdentifier,
@@ -149,6 +151,10 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 			continue
 		}
 
+		if parseMemberAccessAssignment(&parserState, token) {
+			continue
+		}
+
 		parserState.TokenIndex++
 	}
 
@@ -159,6 +165,70 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 	PrintAST(parserState.ASTRoot, 0)
 
 	return parserState.ASTRoot
+}
+
+func parseMemberAccessAssignment(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "[" && parserState.ProgramState == ProgramStateNormal {
+		parserState.ProgramState = ProgramStateMemberAccess
+		parserState.ASTNodeMemberAccess = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeMemberAccessAssignment,
+		}
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNoteTypeExpression,
+		}
+		return true
+	}
+
+	if parserState.ProgramState == ProgramStateMemberAccess {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsMemberAccessExpr && !parserState.IsArgList {
+			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeIdentifier,
+				Value: token.Value,
+			})
+
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "," && !parserState.IsArgList && !parserState.IsMemberAccessExpr {
+			parserState.IsMemberAccessExpr = true
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypeOperator && token.Value == "=" && !parserState.IsArgList {
+			parserState.IsArgList = true
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "]" {
+			fixExpression(&parserState.ASTNodeExpr)
+			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, parserState.ASTNodeExpr)
+
+			parserState.ASTNodeExpr = genalphatypes.ASTNode{
+				Type: genalphatypes.ASTNoteTypeExpression,
+			}
+
+			parserState.IsMemberAccessExpr = false
+
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypeNewline && parserState.IsArgList {
+			fixExpression(&parserState.ASTNodeExpr)
+			parserState.ASTNodeMemberAccess.Children = append(parserState.ASTNodeMemberAccess.Children, parserState.ASTNodeExpr)
+
+			parserState.ProgramState = ProgramStateNormal
+			parserState.IsArgList = false
+			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeMemberAccess)
+			return true
+		}
+
+		if parserState.IsArgList || parserState.IsMemberAccessExpr {
+			parseExpression(parserState, token)
+			return true
+		}
+	}
+
+	return false
 }
 
 func parseAssignment(parserState *ParserState, token genalphatypes.Token) bool {
@@ -189,7 +259,6 @@ func parseAssignment(parserState *ParserState, token genalphatypes.Token) bool {
 
 			parserState.ProgramState = ProgramStateNormal
 			parserState.IsArgList = false
-			fmt.Println(parserState.ASTNodeAssign)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeAssign)
 			return true
 		}
@@ -621,12 +690,44 @@ func makeBlocks(expression *genalphatypes.ASTNode) {
 	}
 }
 
+func binarySplit(expression *genalphatypes.ASTNode, where int) {
+	var childrenTemp = slices.Clone(expression.Children)
+
+	var binaryBlock = genalphatypes.ASTNode{
+		Type:  genalphatypes.ASTNodeTypeBinaryOperation,
+		Value: expression.Children[where].Value,
+		Children: []genalphatypes.ASTNode{
+			{
+				Type:     genalphatypes.ASTNodeTypeBlock,
+				Children: childrenTemp[:where],
+			},
+			{
+				Type:     genalphatypes.ASTNodeTypeBlock,
+				Children: childrenTemp[where+1:],
+			},
+		},
+	}
+
+	expression.Children = []genalphatypes.ASTNode{binaryBlock}
+
+	for _, child := range expression.Children {
+		orderOperations(&child)
+	}
+}
+
 func orderOperations(expression *genalphatypes.ASTNode) {
 	var i int
 
+	var operationType = 0
+
 	for {
 		if i >= len(expression.Children) {
-			break
+			if operationType >= 6 {
+				break
+			}
+
+			i = 0
+			operationType++
 		}
 
 		if expression.Children[i].Type == genalphatypes.ASTNodeTypeBlock {
@@ -638,36 +739,53 @@ func orderOperations(expression *genalphatypes.ASTNode) {
 				panic("PARSER: Operator at start or end of expression")
 			}
 
-			switch expression.Children[i].Value {
-			case "&&": // type 0 block meaning we split the entire expression in 2 parts
-				var childrenTemp = slices.Clone(expression.Children)
-
-				var andBlock = genalphatypes.ASTNode{
-					Type:  genalphatypes.ASTNodeTypeBinaryOperation,
-					Value: "&&",
-					Children: []genalphatypes.ASTNode{
-						{
-							Type:     genalphatypes.ASTNodeTypeBlock,
-							Children: childrenTemp[:i],
-						},
-						{
-							Type:     genalphatypes.ASTNodeTypeBlock,
-							Children: childrenTemp[i+1:],
-						},
-					},
+			switch operationType {
+			case 0:
+				if expression.Children[i].Value == "&&" {
+					binarySplit(expression, i)
+					i = 0
 				}
-
-				expression.Children = []genalphatypes.ASTNode{andBlock}
-				i = 0
-
-				for _, child := range expression.Children {
-					orderOperations(&child)
+			case 1:
+				if expression.Children[i].Value == "||" {
+					binarySplit(expression, i)
+					i = 0
 				}
+			case 2:
+				if expression.Children[i].Value == "==" || expression.Children[i].Value == "!=" || expression.Children[i].Value == "<" || expression.Children[i].Value == ">" || expression.Children[i].Value == "<=" || expression.Children[i].Value == ">=" {
+					binarySplit(expression, i)
+					i = 0
+				}
+			case 3:
+				if expression.Children[i].Value == "+" || expression.Children[i].Value == "-" {
+					binarySplit(expression, i)
+					i = 0
+				}
+			case 4:
+				if expression.Children[i].Value == "*" || expression.Children[i].Value == "/" || expression.Children[i].Value == "%" || expression.Children[i].Value == "^" || expression.Children[i].Value == "&" || expression.Children[i].Value == "|" {
+					binarySplit(expression, i)
+					i = 0
+				}
+			case 5:
+				if expression.Children[i].Value == "!" {
+					var unaryBlock = genalphatypes.ASTNode{
+						Type:  genalphatypes.ASTNodeTypeUnaryOperation,
+						Value: expression.Children[i].Value,
+						Children: []genalphatypes.ASTNode{
+							{
+								Type:     genalphatypes.ASTNodeTypeBlock,
+								Children: expression.Children[i+1:],
+							},
+						},
+					}
 
-				break
+					expression.Children = []genalphatypes.ASTNode{unaryBlock}
+
+					for _, child := range expression.Children {
+						orderOperations(&child)
+					}
+				}
 			}
 		}
-
 		i++
 	}
 }

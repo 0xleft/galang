@@ -179,7 +179,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 		}
 
 		// identifier
-		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' || char == '.' {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' {
 			if inString {
 				i++
 				continue
@@ -187,7 +187,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 
 			var added = false
 			for j := i + 1; j < len(line); j++ {
-				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' || line[j] == '.' {
+				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' {
 					continue
 				}
 
