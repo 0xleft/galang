@@ -543,19 +543,37 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token) bool {
 
 // makes it so its correct order of operations
 func fixExpression(expression *genalphatypes.ASTNode) {
+	fixOperators(expression)
 	makeBlocks(expression)
 	orderOperations(expression)
 }
 
-func orderOperations(expression *genalphatypes.ASTNode) {
+// basicaly just merge operator if there is 2 in a row
+func fixOperators(expression *genalphatypes.ASTNode) {
 	var i int
 	for {
 		if i >= len(expression.Children) {
 			break
 		}
 
+		if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator {
+			if i == 0 || i == len(expression.Children)-1 {
+				panic("PARSER: Operator at start or end of expression")
+			}
+
+			if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator && expression.Children[i+1].Type == genalphatypes.ASTNodeTypeOperator {
+				expression.Children[i].Value += expression.Children[i+1].Value
+				expression.Children = append(expression.Children[:i+1], expression.Children[i+2:]...)
+				i = 0
+				continue
+			}
+
+		}
+
 		i++
 	}
+
+	fmt.Println(expression)
 }
 
 func makeBlocks(expression *genalphatypes.ASTNode) {
@@ -595,9 +613,62 @@ func makeBlocks(expression *genalphatypes.ASTNode) {
 			expression.Children = append(expression.Children, astCopy[i+1:]...)
 
 			makeBlocks(&block)
-			block = genalphatypes.ASTNode{}
+			block = genalphatypes.ASTNode{
+				Type: genalphatypes.ASTNodeTypeBlock,
+			}
 			i = blockStart // Reset i to blockStart to continue processing
 		}
+	}
+}
+
+func orderOperations(expression *genalphatypes.ASTNode) {
+	var i int
+
+	for {
+		if i >= len(expression.Children) {
+			break
+		}
+
+		if expression.Children[i].Type == genalphatypes.ASTNodeTypeBlock {
+			orderOperations(&expression.Children[i])
+		}
+
+		if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator {
+			if i == 0 || i == len(expression.Children)-1 {
+				panic("PARSER: Operator at start or end of expression")
+			}
+
+			switch expression.Children[i].Value {
+			case "&&": // type 0 block meaning we split the entire expression in 2 parts
+				var childrenTemp = slices.Clone(expression.Children)
+
+				var andBlock = genalphatypes.ASTNode{
+					Type:  genalphatypes.ASTNodeTypeBinaryOperation,
+					Value: "&&",
+					Children: []genalphatypes.ASTNode{
+						{
+							Type:     genalphatypes.ASTNodeTypeBlock,
+							Children: childrenTemp[:i],
+						},
+						{
+							Type:     genalphatypes.ASTNodeTypeBlock,
+							Children: childrenTemp[i+1:],
+						},
+					},
+				}
+
+				expression.Children = []genalphatypes.ASTNode{andBlock}
+				i = 0
+
+				for _, child := range expression.Children {
+					orderOperations(&child)
+				}
+
+				break
+			}
+		}
+
+		i++
 	}
 }
 
