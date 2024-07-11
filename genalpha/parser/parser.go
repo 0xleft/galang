@@ -21,6 +21,7 @@ const (
 	ProgramStateImport
 	ProgramStateMemberAccess
 	ProgramStateMemberAssign
+	ProgramStateFunctionCallExpression
 )
 
 type ParserState struct {
@@ -32,10 +33,13 @@ type ParserState struct {
 	OpenCurly               int
 	DeclarationCount        int  // loops, if, function
 	IsMemberAccessExpr      bool // only used for member access expression
+	IsCallExpr              bool
 	IsArgList               bool
 	IsFuncBlock             bool
 	ASTNodeFunc             genalphatypes.ASTNode // for constructing function declaration
 	ASTNodeCall             genalphatypes.ASTNode // for constructing function call
+	ASTNodeCallExpr         genalphatypes.ASTNode // for constructing function call in expression
+	ASTNodeCallTempExpr     genalphatypes.ASTNode // used for expressions in function call args
 	ASTNodeExpr             genalphatypes.ASTNode // for constructing expressions
 	ASTRoot                 genalphatypes.ASTNode
 	ASTNodeDecl             genalphatypes.ASTNode
@@ -45,7 +49,6 @@ type ParserState struct {
 	ASTNodeMemberAccess     genalphatypes.ASTNode
 	ASTNodeMemberAccessExpr genalphatypes.ASTNode
 	ASTNodeMemberAssign     genalphatypes.ASTNode
-	ASTNodeNamespace        genalphatypes.ASTNode
 	ASTNodeParent           *genalphatypes.ASTNode   // for nested blocks
 	ASTNodeStack            []*genalphatypes.ASTNode // for nested blocks too
 }
@@ -84,8 +87,8 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 		ASTNodeMemberAssign: genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeMemberAssignment,
 		},
-		ASTNodeNamespace: genalphatypes.ASTNode{
-			Type: genalphatypes.ASTNodeTypeIdentifier,
+		ASTNodeCallTempExpr: genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeExpression,
 		},
 	}
 
@@ -132,6 +135,9 @@ func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
 
 		if parserState.IsArgList {
 			if parseMemberAccess(&parserState, token) {
+				continue
+			}
+			if parseFunctionCallExpression(&parserState, token) {
 				continue
 			}
 		}
@@ -456,6 +462,66 @@ func parseVariableDeclaration(parserState *ParserState, token genalphatypes.Toke
 
 		if parserState.IsArgList {
 			parseExpression(parserState, token, nil)
+			return true
+		}
+	}
+
+	return false
+}
+
+func parseFunctionCallExpression(parserState *ParserState, token genalphatypes.Token) bool {
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordCall) {
+		parserState.PreviousState = parserState.ProgramState
+		parserState.ProgramState = ProgramStateFunctionCallExpression
+		parserState.ASTNodeCallExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeFunctionCall,
+		}
+
+		return true
+	}
+
+	if parserState.ProgramState == ProgramStateFunctionCallExpression {
+		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsCallExpr {
+			parserState.ASTNodeCallExpr.Children = append(parserState.ASTNodeCallExpr.Children, genalphatypes.ASTNode{
+				Type:  genalphatypes.ASTNodeTypeIdentifier,
+				Value: token.Value,
+			})
+
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "(" && !parserState.IsCallExpr {
+			parserState.IsCallExpr = true
+			return true
+		}
+
+		if token.Type == genalphatypes.TokenTypePunctuation && token.Value == ")" {
+			// append last arg
+			fixExpression(&parserState.ASTNodeExpr)
+			parserState.ASTNodeCallExpr.Children = append(parserState.ASTNodeCallExpr.Children, parserState.ASTNodeCallTempExpr)
+			parserState.IsCallExpr = false
+
+			parserState.ProgramState = parserState.PreviousState
+			parserState.ASTNodeExpr.Children = append(parserState.ASTNodeExpr.Children, parserState.ASTNodeCallExpr)
+			return true
+		}
+
+		if parserState.IsCallExpr {
+			if token.Type == genalphatypes.TokenTypePunctuation && token.Value == "," {
+				if parserState.ASTNodeExpr.Type == 0 {
+					panic("PARSER: Expected expression")
+				}
+				fixExpression(&parserState.ASTNodeExpr)
+				parserState.ASTNodeCallExpr.Children = append(parserState.ASTNodeCallExpr.Children, parserState.ASTNodeCallTempExpr)
+
+				parserState.ASTNodeCallTempExpr = genalphatypes.ASTNode{
+					Type: genalphatypes.ASTNodeTypeExpression,
+				}
+
+				return true
+			}
+
+			parseExpression(parserState, token, &parserState.ASTNodeCallTempExpr)
 			return true
 		}
 	}

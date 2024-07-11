@@ -8,13 +8,13 @@ import (
 func ReadContents(filename string) string {
 	file, err := os.Open(filename)
 	if err != nil {
-		panic("Error opening file")
+		panic("Error opening file " + filename)
 	}
 	defer file.Close()
 
 	contents, err := io.ReadAll(file)
 	if err != nil {
-		panic("Error reading file")
+		panic("Error reading file " + filename)
 	}
 
 	return string(contents)

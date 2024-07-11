@@ -154,7 +154,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 			continue
 		}
 
-		if char == '+' || char == '-' || char == '*' || char == '/' || char == '%' || char == '=' || char == '!' || char == '<' || char == '>' || char == '&' || char == '|' || char == '^' || char == '.' {
+		if char == '+' || char == '-' || char == '*' || char == '/' || char == '%' || char == '=' || char == '!' || char == '<' || char == '>' || char == '&' || char == '|' || char == '^' {
 			tokens = append(tokens, genalphatypes.Token{
 				Type:  genalphatypes.TokenTypeOperator,
 				Value: string(char),
@@ -178,7 +178,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 		}
 
 		// identifier
-		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' {
+		if char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z' || char == '_' || char == '.' {
 			if inString {
 				i++
 				continue
@@ -186,7 +186,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 
 			var added = false
 			for j := i + 1; j < len(line); j++ {
-				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' {
+				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' || line[j] == '.' {
 					continue
 				}
 

@@ -1,6 +1,7 @@
 on gyat no rizz this project shall be blessed by the cringe of all us rizzlers and shall be licensed under the skidibi license.
 
-lowkey main{x}
-    [test 1] = [x 1]
-    test = [x (2+1) / 2]
+lowkey test.main{x}
+    `[test 1] = [x 1]
+    `test = [x (2+1) / 2]
+    test = (fire anotherone(x,2,3) + 2)
 end

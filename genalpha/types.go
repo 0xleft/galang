@@ -52,20 +52,19 @@ const (
 type Keyword string
 
 const (
-	KeywordNamespace Keyword = "land"
-	KeywordVar       Keyword = "fax"
-	KeywordIf        Keyword = "skibidi"
-	KeywordIfYes     Keyword = "yeah"
-	KeywordIfNo      Keyword = "nah"
-	KeywordFunc      Keyword = "lowkey"
-	KeywordEnd       Keyword = "end"
-	KeywordCall      Keyword = "fire"
-	KeywordWhile     Keyword = "yap"
-	KeywordImport    Keyword = "gyat"
-	KeywordReturn    Keyword = "rizzult"
-	KeywordTrue      Keyword = "yay"
-	KeywordFalse     Keyword = "nay"
-	KeywordNone      Keyword = "nuthin"
+	KeywordVar    Keyword = "fax"
+	KeywordIf     Keyword = "skibidi"
+	KeywordIfYes  Keyword = "yeah"
+	KeywordIfNo   Keyword = "nah"
+	KeywordFunc   Keyword = "lowkey"
+	KeywordEnd    Keyword = "end"
+	KeywordCall   Keyword = "fire"
+	KeywordWhile  Keyword = "yap"
+	KeywordImport Keyword = "gyat"
+	KeywordReturn Keyword = "rizzult"
+	KeywordTrue   Keyword = "yay"
+	KeywordFalse  Keyword = "nay"
+	KeywordNone   Keyword = "nuthin"
 )
 
 var (
