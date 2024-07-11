@@ -63,7 +63,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 			if char == '"' {
 				tokens = append(tokens, genalphatypes.Token{
 					Type:  genalphatypes.TokenTypeString,
-					Value: line[tokenStart : i+1],
+					Value: line[tokenStart+1 : i],
 					Line:  lineNum,
 				})
 				inString = false

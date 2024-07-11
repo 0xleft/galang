@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 
@@ -22,51 +23,137 @@ type Scope struct {
 
 type Function struct {
 	Name string
-	Args []string
-	Body genalphatypes.ASTNode
+	Args []genalphatypes.ASTNode
+	Body []genalphatypes.ASTNode
 }
 
 type Variable struct {
 	Name  string
+	Type  genalphatypes.ASTNodeType
 	Value string
 }
 
 type InterpreterState struct {
-	Functions []Function
-	Variables []Variable
+	Functions   []Function
+	ScopeStack  []Scope
+	ReturnStack []genalphatypes.ASTNode
+	ReturnIndex int
+
+	Scope       Scope
+	GlobalScope Scope
 }
 
 func Interpret(ast *genalphatypes.ASTNode) {
+	var interpreterState = InterpreterState{}
+
 	if ast.Type != genalphatypes.ASTNodeTypeProgram {
 		panic("Invalid AST type, parent should be a program node")
 	}
 
 	for _, child := range ast.Children {
-		interpretNode(child)
+		interpretNode(&interpreterState, child)
+	}
+
+	for _, function := range interpreterState.Functions {
+		if function.Name == "main" {
+			for _, instructionNode := range function.Body {
+				interpretNode(&interpreterState, instructionNode)
+			}
+
+			return
+		}
+	}
+
+	panic("No main function found, please declare a main function with the name 'main'")
+}
+
+func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+	switch node.Type {
+	case genalphatypes.ASTNodeTypeFunctionDeclaration:
+		interpretFunctionDeclaration(interpreterState, node)
+	case genalphatypes.ASTNodeTypeVariableDeclaration:
+		interpretVariableDeclaration(interpreterState, node)
+	case genalphatypes.ASTNodeTypeVariableAssignment:
+		interpretVariableAssignment(interpreterState, node)
+	case genalphatypes.ASTNodeTypeIf:
+		interpretIf(interpreterState, node)
+	case genalphatypes.ASTNodeTypeWhile:
+		interpretWhile(interpreterState, node)
+	case genalphatypes.ASTNodeTypeReturn:
+		interpretReturn(interpreterState, node)
+	case genalphatypes.ASTNodeTypeImport:
+		interpretImport(interpreterState, node)
+	case genalphatypes.ASTNodeTypeBlock:
+		interpretBlock(interpreterState, node)
+	case genalphatypes.ASTNodeTypeFunctionCall:
+		interpreterFunctionCall(interpreterState, node)
+	case genalphatypes.ASTNodeTypeFunctionArgument:
+		// do nothing
+		return
+	default:
+		panic("Invalid AST node type" + fmt.Sprint(node.Type))
 	}
 }
 
-func interpretNode(node genalphatypes.ASTNode) {
-	switch node.Type {
-	case genalphatypes.ASTNodeTypeFunctionDeclaration:
-		//interpretFunctionDeclaration(node)
-	case genalphatypes.ASTNodeTypeVariableDeclaration:
-		//interpretVariableDeclaration(node)
-	case genalphatypes.ASTNodeTypeVariableAssignment:
-		//interpretVariableAssignment(node)
-	case genalphatypes.ASTNodeTypeIf:
-		//interpretIf(node)
-	case genalphatypes.ASTNodeTypeWhile:
-		//interpretWhile(node)
-	case genalphatypes.ASTNodeTypeReturn:
-		//interpretReturn(node)
-	case genalphatypes.ASTNodeTypeImport:
-		//interpretImport(node)
-	case genalphatypes.ASTNodeTypeBlock:
-		//interpretBlock(node)
-	default:
-		panic("Invalid AST node type")
+func interpretFunctionDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+	var name = node.Children[0].Value
+	var args = []genalphatypes.ASTNode{}
+	var bodyStart = 1
+	for _, arg := range node.Children {
+		if arg.Type == genalphatypes.ASTNodeTypeFunctionArgument {
+			args = append(args, arg)
+			bodyStart++
+		} else {
+			break
+		}
 	}
+
+	var function = Function{
+		Name: name,
+		Args: args,
+		Body: node.Children[bodyStart:],
+	}
+
+	interpreterState.Functions = append(interpreterState.Functions, function)
+}
+
+func interpreterFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+
+}
+
+func interpretBlock(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+}
+
+func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+}
+
+func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+}
+
+func interpretReturn(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+}
+
+func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+	if len(node.Children) != 1 {
+		panic("import should be done with one argument, the file to import, such as 'gyat \"test.gal\"'")
+	}
+
+	var filename = node.Children[0].Value
+	var isString = node.Children[0].Type == genalphatypes.ASTNodeTypeString
+	if !isString {
+		panic("import should be done with a string argument, the file to import, such as 'gyat \"test.gal\"'")
+	}
+
+	var ast = loadAST(filename)
+	for _, child := range ast.Children {
+		interpretNode(interpreterState, child)
+	}
+}
+
+func interpretVariableDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+}
+
+func interpretVariableAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
 }
 
 // returns the sha256 hash of the given ast
@@ -145,14 +232,13 @@ func readNotFirstLineFile(filename string) string {
 
 // load and save are for when importing new files so we dont have to lex and parse them again (optimization and easier to work with)
 func loadAST(filename string) genalphatypes.ASTNode {
-	var firstLine = readFirstLineFile(filename)
+	var firstLine = readFirstLineFile(filename + "+")
 	if firstLine == "" {
-		// todo actualy parse here and then save the ast
-
+		// parse here and then save the ast
 		var contents = utils.ReadContents(filename)
 		var tokens = lexer.Lex(contents, filename)
 		var ast = parser.Parse(tokens)
-		saveAST(ast, filename)
+		saveAST(ast, filename+"+")
 
 		return ast
 	}
