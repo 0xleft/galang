@@ -19,10 +19,22 @@ jobs:
         with:
           go-version: 1.22
       - name: Run go build
+        if: matrix.os == 'ubuntu-latest'
         run: go build -v -o gal
       - name: Publish to GitHub Releases
+        if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
           files: gal
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run go build
+        if: matrix.os == 'windows-latest'
+        run: go build -v -o gal.exe
+      - name: Publish to GitHub Releases
+        if: matrix.os == 'windows-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: gal.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
