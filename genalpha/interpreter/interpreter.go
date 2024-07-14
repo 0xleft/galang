@@ -263,6 +263,13 @@ func resolveExpression(interpreterState *InterpreterState, node genalphatypes.AS
 		return resolveExpression(interpreterState, node.Children[0])
 	}
 
+	if node.Type == genalphatypes.ASTNodeTypeNone {
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: "",
+		}
+	}
+
 	panic("Invalid expression node type " + fmt.Sprint(node.Type))
 }
 

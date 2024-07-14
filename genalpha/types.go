@@ -80,6 +80,9 @@ var (
 		string(KeywordWhile),
 		string(KeywordImport),
 		string(KeywordReturn),
+		string(KeywordTrue),
+		string(KeywordFalse),
+		string(KeywordNone),
 	}
 )
 
