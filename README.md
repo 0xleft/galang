@@ -1,15 +1,17 @@
-# GenAlpha lang
+# GenAlpha lang 🤓
 
-Lanaguage passed onto us from our ancestors
+A programming language featuring simple AST generation and interpreter
 
-## Sigma sigma, skibidi
+Further design schematics can be found in [docs](docs/README.md) folder.
 
-Like in python everything is an object
+## Hello world ❤️
 
-```genalpha
-on gyat no rizz this project shall be blessed by the cringe of all us rizzlers and shall be licensed under the skidibi license.
-
-lowkey main()
+```gal
+lowkey main{}
     fire print("hello world")
 end
 ```
+
+## License
+
+This project and all projects using this programming language must be licensed under the skibidi license such as one featured in this repository.

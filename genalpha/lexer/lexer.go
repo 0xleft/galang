@@ -51,10 +51,20 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 		}
 
 		if inString {
+			if line[i-1] == '\\' && char == '"' {
+				i++
+				continue
+			}
 			if char == '"' {
+				replacables := []string{"\\\""}
+				replaces := []string{"\""}
+				finalString := line[tokenStart+1 : i]
+				for j, replacable := range replacables {
+					finalString = strings.ReplaceAll(finalString, replacable, replaces[j])
+				}
 				tokens = append(tokens, genalphatypes.Token{
 					Type:  genalphatypes.TokenTypeString,
-					Value: line[tokenStart+1 : i],
+					Value: finalString,
 					Line:  lineNum,
 				})
 				inString = false
