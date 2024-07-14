@@ -54,13 +54,13 @@ type Keyword string
 
 const (
 	KeywordVar    Keyword = "fax"
-	KeywordIf     Keyword = "skibidi"
+	KeywordIf     Keyword = "foreal"
 	KeywordIfYes  Keyword = "yeah"
 	KeywordIfNo   Keyword = "nah"
 	KeywordFunc   Keyword = "lowkey"
 	KeywordEnd    Keyword = "end"
 	KeywordCall   Keyword = "fire"
-	KeywordWhile  Keyword = "yap"
+	KeywordWhile  Keyword = "durin"
 	KeywordImport Keyword = "gyat"
 	KeywordReturn Keyword = "rizzult"
 	KeywordTrue   Keyword = "yay"

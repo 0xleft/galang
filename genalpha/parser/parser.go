@@ -378,13 +378,8 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 		if token.Type == genalphatypes.TokenTypeNewline {
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeExpr)
-
-			parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children = append(parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children, *parserState.ASTNodeParent)
-			parserState.ASTNodeParent = parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1]
-			parserState.ASTNodeStack = parserState.ASTNodeStack[:len(parserState.ASTNodeStack)-1]
 			parserState.ProgramState = ProgramStateNormal
 			parserState.IsArgList = false
-
 			return true
 		}
 
@@ -392,6 +387,16 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 			parseExpression(parserState, token, nil)
 			return true
 		}
+	}
+
+	if token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordEnd) {
+		// apend to the node stacks last node children
+		parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children = append(parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children, *parserState.ASTNodeParent)
+
+		// pop stack
+		parserState.ASTNodeParent = parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1]
+		parserState.ASTNodeStack = parserState.ASTNodeStack[:len(parserState.ASTNodeStack)-1]
+		return true
 	}
 
 	return false
@@ -655,9 +660,9 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token, expres
 		exprNode = expression
 	}
 
-	if token.Type == genalphatypes.TokenTypeIdentifier {
+	if token.Value == string(genalphatypes.KeywordTrue) || token.Value == string(genalphatypes.KeywordFalse) {
 		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
-			Type:  genalphatypes.ASTNodeTypeIdentifier,
+			Type:  genalphatypes.ASTNodeTypeBoolean,
 			Value: token.Value,
 		})
 		return true
@@ -687,14 +692,6 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token, expres
 		return true
 	}
 
-	if token.Value == string(genalphatypes.KeywordTrue) || token.Value == string(genalphatypes.KeywordFalse) {
-		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
-			Type:  genalphatypes.ASTNodeTypeBoolean,
-			Value: token.Value,
-		})
-		return true
-	}
-
 	if token.Type == genalphatypes.TokenTypeOperator {
 		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
 			Type:  genalphatypes.ASTNodeTypeOperator,
@@ -718,6 +715,14 @@ func parseExpression(parserState *ParserState, token genalphatypes.Token, expres
 			Value: token.Value,
 		})
 
+		return true
+	}
+
+	if token.Type == genalphatypes.TokenTypeIdentifier {
+		exprNode.Children = append(exprNode.Children, genalphatypes.ASTNode{
+			Type:  genalphatypes.ASTNodeTypeIdentifier,
+			Value: token.Value,
+		})
 		return true
 	}
 

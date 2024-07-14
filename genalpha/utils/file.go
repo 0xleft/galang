@@ -8,6 +8,7 @@ import (
 func ReadContents(filename string) string {
 	file, err := os.Open(filename)
 	if err != nil {
+		// todo
 		panic(err)
 		panic("Error opening file " + filename)
 	}
@@ -15,6 +16,7 @@ func ReadContents(filename string) string {
 
 	contents, err := io.ReadAll(file)
 	if err != nil {
+		// todo
 		panic(err)
 		panic("Error reading file " + filename)
 	}

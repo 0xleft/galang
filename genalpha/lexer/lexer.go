@@ -106,9 +106,20 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 			continue
 		}
 
-		if char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == ',' || char == ';' {
+		if char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == ',' {
 			tokens = append(tokens, genalphatypes.Token{
 				Type:  genalphatypes.TokenTypePunctuation,
+				Value: string(char),
+				Line:  lineNum,
+			})
+
+			i++
+			continue
+		}
+
+		if char == ';' {
+			tokens = append(tokens, genalphatypes.Token{
+				Type:  genalphatypes.TokenTypeNewline,
 				Value: string(char),
 				Line:  lineNum,
 			})

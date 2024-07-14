@@ -19,6 +19,7 @@ func main() {
 
 	filename := os.Args[1]
 	contents := utils.ReadContents(filename)
+	fmt.Println(contents)
 	tokens := lexer.Lex(contents, filename)
 	fmt.Println(tokens)
 	ast := parser.Parse(tokens)
