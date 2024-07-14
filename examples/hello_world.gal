@@ -1,9 +1,3 @@
-on gyat no rizz this project shall be blessed by the cringe of all us rizzlers and shall be licensed under the skidibi license.
-
 lowkey main{}
-    fax x = 2
-
-    durin x < 1000000
-        x = a + 1
-    end
+    fire std.println("hello world")
 end

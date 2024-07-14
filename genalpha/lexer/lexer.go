@@ -12,15 +12,6 @@ func Lex(contents string, filename string) []genalphatypes.Token {
 	for i, line := range strings.Split(contents, "\n") {
 		line = strings.ReplaceAll(line, "\r", "") // windows line endings
 
-		// first line must contain the special license sentence
-		if i == 0 {
-			if line != "on gyat no rizz this project shall be blessed by the cringe of all us rizzlers and shall be licensed under the skidibi license." {
-				panic(filename + " First line must contain the special license sentence")
-			}
-
-			continue
-		}
-
 		tokens = append(tokens, lexLine(line, i)...)
 		tokens = append(tokens, genalphatypes.Token{
 			Type:  genalphatypes.TokenTypeNewline,
