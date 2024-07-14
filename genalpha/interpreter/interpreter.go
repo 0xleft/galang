@@ -685,15 +685,29 @@ func interpretVariableAssignment(interpreterState *InterpreterState, node genalp
 	var name = node.Children[0].Value
 	var value = resolveExpression(interpreterState, node.Children[1])
 
-	var variable = interpreterState.LocalScope.Variables[name]
-	if variable.Name == "" {
-		variable = interpreterState.GlobalScope.Variables[name]
-	}
-	if variable.Name == "" {
-		panic("Variable " + name + " not found")
+	variable := interpreterState.LocalScope.Variables[name]
+	if variable.Name != "" {
+		interpreterState.LocalScope.Variables[name] = Variable{
+			Name:     name,
+			Type:     value.Type,
+			Value:    value.Value,
+			Indecies: variable.Indecies,
+		}
+		return
 	}
 
-	variable.Value = value.Value
+	variable = interpreterState.GlobalScope.Variables[name]
+	if variable.Name != "" {
+		interpreterState.GlobalScope.Variables[name] = Variable{
+			Name:     name,
+			Type:     value.Type,
+			Value:    value.Value,
+			Indecies: variable.Indecies,
+		}
+		return
+	}
+
+	panic("Variable " + name + " not found")
 }
 
 // returns the sha256 hash of the given ast
