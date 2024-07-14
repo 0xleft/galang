@@ -376,10 +376,8 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 
 	if parserState.ProgramState == ProgramStateIf || parserState.ProgramState == ProgramStateWhile {
 		if token.Type == genalphatypes.TokenTypeNewline {
-			// append expression
 			fixExpression(&parserState.ASTNodeExpr)
 			parserState.ASTNodeParent.Children = append(parserState.ASTNodeParent.Children, parserState.ASTNodeExpr)
-			// append if block to parent
 
 			parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children = append(parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1].Children, *parserState.ASTNodeParent)
 			parserState.ASTNodeParent = parserState.ASTNodeStack[len(parserState.ASTNodeStack)-1]

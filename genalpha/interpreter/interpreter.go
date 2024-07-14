@@ -176,6 +176,29 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 }
 
 func interpretMemberAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+
+	var name = node.Children[0].Value
+	var variable = interpreterState.LocalScope.Variables[name]
+	if variable.Name == "" {
+		variable = interpreterState.GlobalScope.Variables[name]
+	}
+	if variable.Name == "" {
+		panic("Variable " + name + " not found")
+	}
+
+	var index = resolveExpression(interpreterState, node.Children[1])
+	if index.Type != genalphatypes.ASTNodeTypeNumber {
+		panic("Invalid index type for member assignment")
+	}
+
+	var value = resolveExpression(interpreterState, node.Children[2])
+
+	variable.Indecies[index.Value] = Variable{
+		Name:  name,
+		Type:  value.Type,
+		Value: value.Value,
+	}
+
 	return Result{
 		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
@@ -244,9 +267,25 @@ func resolveExpression(interpreterState *InterpreterState, node genalphatypes.AS
 }
 
 func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	var name = node.Children[0].Value
+
+	var variable = interpreterState.LocalScope.Variables[name]
+	if variable.Name == "" {
+		variable = interpreterState.GlobalScope.Variables[name]
+	}
+	if variable.Name == "" {
+		panic("Variable " + name + " not found")
+	}
+
+	index := resolveExpression(interpreterState, node.Children[1])
+	// todo decide
+	//if index.Type != genalphatypes.ASTNodeTypeNumber {
+	//	panic("Invalid index type for member access")
+	//}
+
 	return Result{
-		Type:  genalphatypes.ASTNodeTypeNone,
-		Value: "",
+		Type:  variable.Type,
+		Value: variable.Indecies[index.Value].Value,
 	}
 }
 
@@ -450,10 +489,6 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 	default:
 		panic("Invalid binary operation " + node.Value)
 	}
-
-	return Result{
-		Type: genalphatypes.ASTNodeTypeNone,
-	}
 }
 
 func resolveUnaryOperation(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
@@ -545,6 +580,20 @@ func interpretBlock(interpreterState *InterpreterState, node genalphatypes.ASTNo
 }
 
 func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	condition := resolveExpression(interpreterState, node.Children[0])
+	if condition.Type != genalphatypes.ASTNodeTypeBoolean {
+		panic("Invalid condition type for if statement")
+	}
+
+	if condition.Value == string(genalphatypes.KeywordTrue) {
+		for _, instructionNode := range node.Children[1:] {
+			var result = interpretNode(interpreterState, instructionNode)
+			if result.Type != genalphatypes.ASTNodeTypeNone {
+				return result
+			}
+		}
+	}
+
 	return Result{
 		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
@@ -552,6 +601,25 @@ func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode)
 }
 
 func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	for {
+		condition := resolveExpression(interpreterState, node.Children[0])
+		if condition.Type != genalphatypes.ASTNodeTypeBoolean {
+			panic("Invalid condition type for while statement")
+		}
+
+		if condition.Value == string(genalphatypes.KeywordFalse) {
+			break
+		}
+
+		for _, instructionNode := range node.Children[1:] {
+			fmt.Println("Instruction node", instructionNode)
+			var result = interpretNode(interpreterState, instructionNode)
+			if result.Type != genalphatypes.ASTNodeTypeNone {
+				return result
+			}
+		}
+	}
+
 	return Result{
 		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
