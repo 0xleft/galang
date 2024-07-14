@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 
@@ -17,7 +18,7 @@ import (
 )
 
 type Scope struct {
-	Variables []Variable
+	Variables map[string]Variable
 }
 
 type Function struct {
@@ -32,13 +33,14 @@ type Result struct {
 }
 
 type Variable struct {
-	Name  string
-	Type  genalphatypes.ASTNodeType
-	Value string
+	Name     string
+	Type     genalphatypes.ASTNodeType
+	Value    string
+	Indecies map[string]Variable
 }
 
 type InterpreterState struct {
-	Functions []Function
+	Functions map[string]Function
 
 	ScopeStack  []Scope
 	LocalScope  Scope
@@ -46,7 +48,15 @@ type InterpreterState struct {
 }
 
 func Interpret(ast *genalphatypes.ASTNode, filename string) {
-	var interpreterState = InterpreterState{}
+	var interpreterState = InterpreterState{
+		Functions: map[string]Function{},
+		GlobalScope: Scope{
+			Variables: map[string]Variable{},
+		},
+		LocalScope: Scope{
+			Variables: map[string]Variable{},
+		},
+	}
 
 	if ast.Type != genalphatypes.ASTNodeTypeProgram {
 		panic("Invalid AST type, parent should be a program node")
@@ -61,7 +71,11 @@ func Interpret(ast *genalphatypes.ASTNode, filename string) {
 	for _, function := range interpreterState.Functions {
 		if function.Name == "main" {
 			for _, instructionNode := range function.Body {
-				interpretNode(&interpreterState, instructionNode)
+				var result = interpretNode(&interpreterState, instructionNode)
+				if result.Type != genalphatypes.ASTNodeTypeNone {
+					fmt.Println("Program exited with code:", result.Value)
+					return
+				}
 			}
 
 			return
@@ -87,22 +101,28 @@ func popScope(interpreterState *InterpreterState) {
 
 func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	switch node.Type {
+	case genalphatypes.ASTNodeTypeMemberAssignment:
+		interpretMemberAssignment(interpreterState, node)
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: "",
+		}
 	case genalphatypes.ASTNodeTypeFunctionDeclaration:
 		interpretFunctionDeclaration(interpreterState, node)
 		return Result{
-			Type:  genalphatypes.ASTNodeTypeUnknown,
+			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
 		}
 	case genalphatypes.ASTNodeTypeVariableDeclaration:
 		interpretVariableDeclaration(interpreterState, node)
 		return Result{
-			Type:  genalphatypes.ASTNodeTypeUnknown,
+			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
 		}
 	case genalphatypes.ASTNodeTypeVariableAssignment:
 		interpretVariableAssignment(interpreterState, node)
 		return Result{
-			Type:  genalphatypes.ASTNodeTypeUnknown,
+			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
 		}
 	case genalphatypes.ASTNodeTypeIf:
@@ -114,16 +134,14 @@ func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNod
 	case genalphatypes.ASTNodeTypeImport:
 		interpretImport(interpreterState, node)
 		return Result{
-			Type:  genalphatypes.ASTNodeTypeUnknown,
+			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
 		}
-	case genalphatypes.ASTNodeTypeBlock:
-		return interpretBlock(interpreterState, node)
 	case genalphatypes.ASTNodeTypeFunctionCall:
 		return resolveFunctionCall(interpreterState, node)
 	case genalphatypes.ASTNodeTypeFunctionArgument:
 		return Result{
-			Type:  genalphatypes.ASTNodeTypeUnknown,
+			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
 		}
 	default:
@@ -150,7 +168,18 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 		Body: node.Children[bodyStart:],
 	}
 
-	interpreterState.Functions = append(interpreterState.Functions, function)
+	if interpreterState.Functions[name].Name != "" {
+		panic("Function " + name + " already declared")
+	}
+
+	interpreterState.Functions[name] = function
+}
+
+func interpretMemberAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	return Result{
+		Type:  genalphatypes.ASTNodeTypeNone,
+		Value: "",
+	}
 }
 
 func resolveExpression(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
@@ -179,6 +208,10 @@ func resolveExpression(interpreterState *InterpreterState, node genalphatypes.AS
 		}
 	}
 
+	if node.Type == genalphatypes.ASTNodeTypeBlock {
+		return interpretBlock(interpreterState, node)
+	}
+
 	if node.Type == genalphatypes.ASTNodeTypeBinaryOperation {
 		return resolveBinaryOperation(interpreterState, node)
 	}
@@ -191,57 +224,235 @@ func resolveExpression(interpreterState *InterpreterState, node genalphatypes.AS
 		return resolveFunctionCall(interpreterState, node)
 	}
 
+	if node.Type == genalphatypes.ASTNodeTypeMemberAccess {
+		return resolveMemberAccess(interpreterState, node)
+	}
+
+	if node.Type == genalphatypes.ASTNodeTypeExpression {
+		// empty node
+		if len(node.Children) == 0 {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+
+		return resolveExpression(interpreterState, node.Children[0])
+	}
+
 	panic("Invalid expression node type " + fmt.Sprint(node.Type))
+}
+
+func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	return Result{
+		Type:  genalphatypes.ASTNodeTypeNone,
+		Value: "",
+	}
 }
 
 func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	var name = node.Value
-	for _, variable := range interpreterState.LocalScope.Variables {
-		if variable.Name == name {
-			return Result{
-				Type:  variable.Type,
-				Value: variable.Value,
-			}
-		}
+
+	var result = interpreterState.LocalScope.Variables[name]
+	if result.Name == "" {
+		result = interpreterState.GlobalScope.Variables[name]
+	}
+	if result.Name == "" {
+		panic("Variable " + name + " not found")
 	}
 
-	for _, variable := range interpreterState.GlobalScope.Variables {
-		if variable.Name == name {
-			return Result{
-				Type:  variable.Type,
-				Value: variable.Value,
-			}
-		}
+	return Result{
+		Type:  result.Type,
+		Value: result.Value,
 	}
-
-	panic("Variable " + name + " not found")
 }
 
 func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	var left = resolveExpression(interpreterState, node.Children[0])
 	var right = resolveExpression(interpreterState, node.Children[1])
 
-	// todo
-	var _ = left.Type & right.Type
-
 	switch node.Value {
 	case "+":
+		switch left.Type {
+		// do we keep it like javascript bullshit or check if both are the same
+		case genalphatypes.ASTNodeTypeNumber:
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeNumber,
+				Value: fmt.Sprint(utils.ParseNumber(left.Value) + utils.ParseNumber(right.Value)),
+			}
+		case genalphatypes.ASTNodeTypeString:
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeString,
+				Value: left.Value + right.Value,
+			}
+		default:
+			// todo really?
+			panic("Invalid operand types for binary operation +")
+		}
+
 	case "-":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation -")
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprint(utils.ParseNumber(left.Value) - utils.ParseNumber(right.Value)),
+		}
 	case "*":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation *")
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprint(utils.ParseNumber(left.Value) * utils.ParseNumber(right.Value)),
+		}
+	case "**":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation **")
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprint(math.Pow(utils.ParseNumber(left.Value), utils.ParseNumber(right.Value))),
+		}
 	case "/":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation /")
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprint(utils.ParseNumber(left.Value) / utils.ParseNumber(right.Value)),
+		}
 	case "%":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation %")
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprint(int(utils.ParseNumber(left.Value)) % int(utils.ParseNumber(right.Value))),
+		}
 	case "==":
+		if left.Type != right.Type {
+			panic("Invalid operand types for binary operation ==")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if left.Value == right.Value {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	case "!=":
+		if left.Type != right.Type {
+			panic("Invalid operand types for binary operation !=")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if left.Value != right.Value {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	case ">":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation >")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if utils.ParseNumber(left.Value) > utils.ParseNumber(right.Value) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	case "<":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation <")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if utils.ParseNumber(left.Value) < utils.ParseNumber(right.Value) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	case ">=":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation <")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if utils.ParseNumber(left.Value) >= utils.ParseNumber(right.Value) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	case "<=":
+		if left.Type != genalphatypes.ASTNodeTypeNumber {
+			panic("Invalid operand type for binary operation <")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if utils.ParseNumber(left.Value) <= utils.ParseNumber(right.Value) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
+	case "&&":
+		if left.Type != genalphatypes.ASTNodeTypeBoolean {
+			panic("Invalid operand type for binary operation &&")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if left.Value == string(genalphatypes.KeywordTrue) && right.Value == string(genalphatypes.KeywordTrue) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
+	case "||":
+		if left.Type != genalphatypes.ASTNodeTypeBoolean {
+			panic("Invalid operand type for binary operation ||")
+		}
+
+		var value = string(genalphatypes.KeywordFalse)
+		if left.Value == string(genalphatypes.KeywordTrue) || right.Value == string(genalphatypes.KeywordTrue) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
 	default:
 		panic("Invalid binary operation " + node.Value)
 	}
 
 	return Result{
-		Type: genalphatypes.ASTNodeTypeUnknown,
+		Type: genalphatypes.ASTNodeTypeNone,
 	}
 }
 
@@ -266,76 +477,93 @@ func resolveUnaryOperation(interpreterState *InterpreterState, node genalphatype
 	default:
 		panic("Invalid unary operation " + node.Value)
 	}
+}
+
+func resolveStdFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	var name = node.Children[0].Value
+
+	var stdFunction = STDFunctions[name] // from std.go
+	if stdFunction == nil {
+		panic("Function " + name + " not found")
+	}
+
+	var args = []string{}
+	for _, argNode := range node.Children[1:] {
+		var arg = resolveExpression(interpreterState, argNode)
+		args = append(args, arg.Value)
+	}
 
 	return Result{
-		Type: genalphatypes.ASTNodeTypeUnknown,
+		Type:  genalphatypes.ASTNodeTypeNone,
+		Value: stdFunction(args),
 	}
 }
 
 func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	var name = node.Children[0].Value
-	for _, function := range interpreterState.Functions {
-		if function.Name == name {
-			if len(function.Args) != len(node.Children)-1 {
-				panic("Invalid number of arguments for function " + name)
-			}
 
-			var scope = Scope{}
-			for i, arg := range function.Args {
-				var argValue = resolveExpression(interpreterState, node.Children[i+1])
-				scope.Variables = append(scope.Variables, Variable{
-					Name:  arg.Value,
-					Type:  arg.Type,
-					Value: argValue.Value,
-				})
-			}
+	var function = interpreterState.Functions[name]
+	if function.Name == "" {
+		return resolveStdFunctionCall(interpreterState, node)
+	}
 
-			newScope(interpreterState, scope)
-			for _, instructionNode := range function.Body {
-				var result = interpretNode(interpreterState, instructionNode)
-				if result.Type != genalphatypes.ASTNodeTypeUnknown {
-					popScope(interpreterState)
-					return result
-				}
-			}
-			popScope(interpreterState)
+	if len(function.Args) != len(node.Children)-1 {
+		panic("Invalid number of arguments for function " + name)
+	}
 
-			return Result{
-				Type:  genalphatypes.ASTNodeTypeUnknown,
-				Value: "",
-			}
+	var scope = Scope{
+		Variables: map[string]Variable{},
+	}
+	for i, arg := range function.Args {
+		var argValue = resolveExpression(interpreterState, node.Children[i+1])
+		scope.Variables[arg.Value] = Variable{
+			Name:  arg.Value,
+			Type:  arg.Type,
+			Value: argValue.Value,
 		}
 	}
 
-	panic("Function " + name + " not found")
-}
+	newScope(interpreterState, scope)
+	for _, instructionNode := range function.Body {
+		var result = interpretNode(interpreterState, instructionNode)
+		if result.Type != genalphatypes.ASTNodeTypeNone {
+			popScope(interpreterState)
+			return result
+		}
+	}
+	popScope(interpreterState)
 
-func interpretBlock(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	return Result{
-		Type:  genalphatypes.ASTNodeTypeUnknown,
+		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
 	}
 }
 
+// only case is when we have brackets in an expression
+func interpretBlock(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+	return resolveExpression(interpreterState, node.Children[0])
+}
+
 func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	return Result{
-		Type:  genalphatypes.ASTNodeTypeUnknown,
+		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
 	}
 }
 
 func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	return Result{
-		Type:  genalphatypes.ASTNodeTypeUnknown,
+		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
 	}
 }
 
 func interpretReturn(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	return Result{
-		Type:  genalphatypes.ASTNodeTypeUnknown,
-		Value: "",
+	if len(node.Children) != 1 {
+		panic("return should be done with one argument, the value to return, such as 'rizzult \"returned value\"'")
 	}
+
+	return resolveExpression(interpreterState, node.Children[0])
 }
 
 func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
@@ -355,15 +583,44 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 	}
 
 	return Result{
-		Type:  genalphatypes.ASTNodeTypeUnknown,
+		Type:  genalphatypes.ASTNodeTypeNone,
 		Value: "",
 	}
 }
 
 func interpretVariableDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+	var name = node.Children[0].Value
+	var value = resolveExpression(interpreterState, node.Children[1])
+
+	if strings.HasPrefix(name, "GLOBAL_") {
+		interpreterState.GlobalScope.Variables[name] = Variable{
+			Name:  name,
+			Type:  value.Type,
+			Value: value.Value,
+		}
+		return
+	}
+
+	interpreterState.LocalScope.Variables[name] = Variable{
+		Name:  name,
+		Type:  value.Type,
+		Value: value.Value,
+	}
 }
 
 func interpretVariableAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
+	var name = node.Children[0].Value
+	var value = resolveExpression(interpreterState, node.Children[1])
+
+	var variable = interpreterState.LocalScope.Variables[name]
+	if variable.Name == "" {
+		variable = interpreterState.GlobalScope.Variables[name]
+	}
+	if variable.Name == "" {
+		panic("Variable " + name + " not found")
+	}
+
+	variable.Value = value.Value
 }
 
 // returns the sha256 hash of the given ast
