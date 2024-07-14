@@ -22,5 +22,6 @@ func main() {
 	tokens := lexer.Lex(contents, filename)
 	fmt.Println(tokens)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast)
+	parser.PrintAST(ast, 0)
+	interpreter.Interpret(&ast, filename)
 }

@@ -25,6 +25,7 @@ const (
 	ASTNodeTypeMemberAssignment
 	ASTNodeTypeMemberAccess
 	ASTNodeTypeBlock
+	ASTNodeTypeUnknown
 )
 
 type ASTNode struct {
