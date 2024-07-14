@@ -157,8 +157,6 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 		if arg.Type == genalphatypes.ASTNodeTypeFunctionArgument {
 			args = append(args, arg)
 			bodyStart++
-		} else {
-			break
 		}
 	}
 
@@ -549,18 +547,19 @@ func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.
 		return resolveStdFunctionCall(interpreterState, node)
 	}
 
-	if len(function.Args) != len(node.Children)-1 {
+	if len(function.Args) > len(node.Children)-1 {
 		panic("Invalid number of arguments for function " + name)
 	}
 
 	var scope = Scope{
 		Variables: map[string]Variable{},
 	}
+
 	for i, arg := range function.Args {
 		var argValue = resolveExpression(interpreterState, node.Children[i+1])
 		scope.Variables[arg.Value] = Variable{
 			Name:  arg.Value,
-			Type:  arg.Type,
+			Type:  argValue.Type, // todo is this correct?
 			Value: argValue.Value,
 		}
 	}
@@ -619,7 +618,6 @@ func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNo
 		}
 
 		for _, instructionNode := range node.Children[1:] {
-			fmt.Println("Instruction node", instructionNode)
 			var result = interpretNode(interpreterState, instructionNode)
 			if result.Type != genalphatypes.ASTNodeTypeNone {
 				return result
