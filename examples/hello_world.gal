@@ -1,3 +1,5 @@
+gyat "examples/test.gal"
+
 lowkey main{}
-    
+    fire std.println("hello world")
 end

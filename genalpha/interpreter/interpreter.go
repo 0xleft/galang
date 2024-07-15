@@ -47,7 +47,7 @@ type InterpreterState struct {
 	GlobalScope Scope
 }
 
-func Interpret(ast *genalphatypes.ASTNode, filename string) {
+func Interpret(ast *genalphatypes.ASTNode) {
 	var interpreterState = InterpreterState{
 		Functions: map[string]Function{},
 		GlobalScope: Scope{
@@ -61,8 +61,6 @@ func Interpret(ast *genalphatypes.ASTNode, filename string) {
 	if ast.Type != genalphatypes.ASTNodeTypeProgram {
 		panic("Invalid AST type, parent should be a program node")
 	}
-
-	saveAST(*ast, filename, filename+"+")
 
 	for _, child := range ast.Children {
 		interpretNode(&interpreterState, child)
@@ -792,17 +790,17 @@ func writeToFile(filename string, data string) {
 }
 
 // get everything except the first line of the file
-func readNotFirstLineFile(filename string) string {
+func readNotFirstLineFile(filename string) []byte {
 	file, err := os.Open(filename)
 	if err != nil {
-		return ""
+		return []byte{}
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	scanner.Scan()
 	scanner.Scan()
-	return scanner.Text()
+	return scanner.Bytes()
 }
 
 // load and save are for when importing new files so we dont have to lex and parse them again (optimization and easier to work with)
@@ -818,14 +816,12 @@ func loadAST(filename string) genalphatypes.ASTNode {
 		return ast
 	}
 
-	var nodeString = readNotFirstLineFile(filename)
-	if len(nodeString) == 0 {
+	node := readNotFirstLineFile(filename + "+")
+	if len(node) == 0 {
 		return genalphatypes.ASTNode{}
 	}
 
-	nodeString = strings.ReplaceAll(nodeString, "\\n", "\n")
-
-	return getNodeFromBytes([]byte(nodeString))
+	return getNodeFromBytes(node)
 }
 
 func saveAST(ast genalphatypes.ASTNode, sourceFilename string, filename string) {
