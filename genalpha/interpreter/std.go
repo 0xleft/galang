@@ -3,7 +3,7 @@ package interpreter
 import (
 	"fmt"
 
-	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
+	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
 )
 
 type STDFunction func(args []string) Result

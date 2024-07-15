@@ -11,10 +11,10 @@ import (
 	"os"
 	"strings"
 
-	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
-	"bobik.squidwock.com/root/genalphalang/genalpha/lexer"
-	"bobik.squidwock.com/root/genalphalang/genalpha/parser"
-	"bobik.squidwock.com/root/genalphalang/genalpha/utils"
+	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
+	"bobik.squidwock.com/root/gal/genalpha/lexer"
+	"bobik.squidwock.com/root/gal/genalpha/parser"
+	"bobik.squidwock.com/root/gal/genalpha/utils"
 )
 
 type Scope struct {

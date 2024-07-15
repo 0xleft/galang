@@ -31,10 +31,15 @@ jobs:
       - name: Run go build
         if: matrix.os == 'windows-latest'
         run: go build -v -o gal.exe
+      - name: Create Windows Installer
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install -y nsis
+          makensis -- installer.nsi
       - name: Publish to GitHub Releases
         if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v1
         with:
-          files: gal.exe
+          files: windows_installer.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

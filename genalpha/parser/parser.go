@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
+	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
 )
 
 type ProgramState int

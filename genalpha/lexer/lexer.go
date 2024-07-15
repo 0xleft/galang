@@ -3,7 +3,7 @@ package lexer
 import (
 	"strings"
 
-	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
+	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
 )
 
 func Lex(contents string) []genalphatypes.Token {
