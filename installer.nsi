@@ -17,7 +17,7 @@
 # These will be displayed by the "Click here for support information" link in "Add/Remove Programs"
 # It is possible to use "mailto:" links in here to open the email client
 !define HELPURL "https://github.com/0xleft/gal/issues" # "Support Information" link
-!define UPDATEURL "https://github.com/0xleft/gal/releases/latest/download/windows_installer.exe" # "Product Updates" link
+!define UPDATEURL "https://github.com/0xleft/gal/releases/latest/download/gal_installer.exe" # "Product Updates" link
 !define ABOUTURL "https://github.com/0xleft/gal" # "Publisher" link
 # This is the size (in kB) of all the files copied into "Program Files"
 !define INSTALLSIZE 10000
@@ -31,7 +31,7 @@ LicenseData "LICENSE"
 # This will be in the installer/uninstaller's title bar
 Name "${COMPANYNAME} - ${APPNAME}"
 Icon "logo.ico"
-outFile "windows_installer.exe"
+outFile "gal_installer.exe"
  
 !include LogicLib.nsh
  
