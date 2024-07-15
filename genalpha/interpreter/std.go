@@ -19,4 +19,23 @@ var STDFunctions = map[string]STDFunction{
 		}
 		return ""
 	},
+	"std.exit": func(args []string) string {
+		if len(args) == 0 {
+			panic("exit")
+		}
+		panic(args[0])
+	},
+	"std.eval": func(args []string) string {
+		return ""
+	},
+	"std.exec": func(args []string) string {
+		if len(args) == 0 {
+			return ""
+		}
+		return ""
+	},
+	// execute a system call
+	"std.syscall": func(args []string) string {
+		return ""
+	},
 }

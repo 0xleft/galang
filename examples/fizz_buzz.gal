@@ -1,0 +1,17 @@
+lowkey main{}
+    fax i = 1
+    durin i < 100
+        fax printable = ""
+        foreal i % 3 == 0
+            printable = printable + "Fizz"
+        end
+        foreal i % 5 == 0
+            printable = printable + "Buzz"
+        end
+        foreal printable == nuthin
+            printable = i
+        end
+        fire std.println(printable)
+        i = i + 1
+    end
+end

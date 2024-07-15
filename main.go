@@ -11,6 +11,11 @@ import (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: genalphalang <filename>")
@@ -20,7 +25,7 @@ func main() {
 	filename := os.Args[1]
 
 	contents := utils.ReadContents(filename)
-	tokens := lexer.Lex(contents, filename)
+	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast)
+	interpreter.Interpret(&ast, os.Args[1:])
 }

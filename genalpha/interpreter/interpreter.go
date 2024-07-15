@@ -47,7 +47,7 @@ type InterpreterState struct {
 	GlobalScope Scope
 }
 
-func Interpret(ast *genalphatypes.ASTNode) {
+func Interpret(ast *genalphatypes.ASTNode, args []string) {
 	var interpreterState = InterpreterState{
 		Functions: map[string]Function{},
 		GlobalScope: Scope{
@@ -56,6 +56,20 @@ func Interpret(ast *genalphatypes.ASTNode) {
 		LocalScope: Scope{
 			Variables: map[string]Variable{},
 		},
+	}
+
+	interpreterState.LocalScope.Variables["args"] = Variable{
+		Name:     "args",
+		Type:     genalphatypes.ASTNodeTypeNumber,
+		Value:    fmt.Sprint(len(args)),
+		Indecies: map[string]Variable{},
+	}
+	for i, arg := range args {
+		interpreterState.LocalScope.Variables["args"].Indecies[fmt.Sprint(i)] = Variable{
+			Name:  "args",
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: arg,
+		}
 	}
 
 	if ast.Type != genalphatypes.ASTNodeTypeProgram {
@@ -414,9 +428,10 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			Value: value,
 		}
 	case "!=":
-		if left.Type != right.Type {
-			panic("Invalid operand types for binary operation !=")
-		}
+		// todo decide
+		//if left.Type != right.Type {
+		//	panic("Invalid operand types for binary operation !=")
+		//}
 
 		var value = string(genalphatypes.KeywordFalse)
 		if left.Value != right.Value {
@@ -809,7 +824,7 @@ func loadAST(filename string) genalphatypes.ASTNode {
 	if firstLine == "" {
 		// parse here and then save the ast
 		var contents = utils.ReadContents(filename)
-		var tokens = lexer.Lex(contents, filename)
+		var tokens = lexer.Lex(contents)
 		var ast = parser.Parse(tokens)
 		saveAST(ast, filename, filename+"+")
 

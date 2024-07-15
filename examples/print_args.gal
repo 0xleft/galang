@@ -1,0 +1,7 @@
+lowkey main{}
+    fax i = 0
+    durin [args i] != nuthin
+        fire std.println([args i])
+        i = i + 1
+    end
+end

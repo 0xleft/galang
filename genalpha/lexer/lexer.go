@@ -6,7 +6,7 @@ import (
 	genalphatypes "bobik.squidwock.com/root/genalphalang/genalpha"
 )
 
-func Lex(contents string, filename string) []genalphatypes.Token {
+func Lex(contents string) []genalphatypes.Token {
 	var tokens []genalphatypes.Token
 
 	for i, line := range strings.Split(contents, "\n") {
