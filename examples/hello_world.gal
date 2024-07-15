@@ -1,1 +1,3 @@
-lowkey main{};fire std.println("hello world");end
+lowkey main{}
+    
+end

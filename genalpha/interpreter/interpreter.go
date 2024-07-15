@@ -174,27 +174,48 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 }
 
 func interpretMemberAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-
-	var name = node.Children[0].Value
-	var variable = interpreterState.LocalScope.Variables[name]
-	if variable.Name == "" {
-		variable = interpreterState.GlobalScope.Variables[name]
-	}
-	if variable.Name == "" {
-		panic("Variable " + name + " not found")
-	}
-
-	var index = resolveExpression(interpreterState, node.Children[1])
-	if index.Type != genalphatypes.ASTNodeTypeNumber {
-		panic("Invalid index type for member assignment")
-	}
-
+	name := node.Children[0].Value
+	variable := interpreterState.LocalScope.Variables[name]
+	index := resolveExpression(interpreterState, node.Children[1])
 	var value = resolveExpression(interpreterState, node.Children[2])
 
-	variable.Indecies[index.Value] = Variable{
-		Name:  name,
-		Type:  value.Type,
-		Value: value.Value,
+	if variable.Name != "" {
+		if variable.Indecies == nil {
+			variable.Indecies = map[string]Variable{}
+		}
+
+		variable.Indecies[index.Value] = Variable{
+			Name:  name,
+			Type:  value.Type,
+			Value: value.Value,
+		}
+
+		interpreterState.LocalScope.Variables[name] = variable
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: "",
+		}
+	}
+
+	variable = interpreterState.GlobalScope.Variables[name]
+	if variable.Name != "" {
+		if variable.Indecies == nil {
+			variable.Indecies = map[string]Variable{}
+		}
+
+		variable.Indecies[index.Value] = Variable{
+			Name:  name,
+			Type:  value.Type,
+			Value: value.Value,
+		}
+
+		interpreterState.GlobalScope.Variables[name] = variable
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: "",
+		}
 	}
 
 	return Result{
@@ -380,9 +401,10 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			Value: fmt.Sprint(int(utils.ParseNumber(left.Value)) % int(utils.ParseNumber(right.Value))),
 		}
 	case "==":
-		if left.Type != right.Type {
-			panic("Invalid operand types for binary operation ==")
-		}
+		// todo decide
+		//if left.Type != right.Type {
+		//		panic("Invalid operand types for binary operation ==")
+		//}
 
 		var value = string(genalphatypes.KeywordFalse)
 		if left.Value == right.Value {
