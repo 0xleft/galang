@@ -8,8 +8,11 @@ Further design schematics can be found in [docs](docs/README.md) folder.
 
 ```gal
 lowkey main{}
-    fire print("hello world")
+    fire std.println("hello world")
 end
+
+` or could also be written in one line
+lowkey main{};fire std.println("hello world");end
 ```
 
 ## License
