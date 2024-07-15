@@ -568,10 +568,7 @@ func resolveStdFunctionCall(interpreterState *InterpreterState, node genalphatyp
 		args = append(args, arg.Value)
 	}
 
-	return Result{
-		Type:  genalphatypes.ASTNodeTypeNone,
-		Value: stdFunction(args),
-	}
+	return stdFunction(args)
 }
 
 func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
