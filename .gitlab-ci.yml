@@ -22,5 +22,3 @@ mirror_push:
     - git checkout main
     - git pull http://bobik.squidwock.com/root/genalphalang.git
     - git push https://x-access-token:$GITHUB_MIRROR_TOKEN@$GITHUB_MIRROR_URL
-  only:
-    - main
