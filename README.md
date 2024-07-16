@@ -2,23 +2,21 @@
 
 A programming language featuring simple AST generation and interpreter
 
-Further design schematics can be found in [docs](docs/README.md) folder.
-
 ## Install
 
 ### Windows
 
-Download installer from [here](https://github.com/0xleft/gal/releases/latest/download/windows_installer.exe)
+Download installer from [here](https://github.com/0xleft/gal/releases/latest/download/gal_installer.exe)
 
 ```powershell
-gal.exe --help
+gal.exe
 ```
 
 ### Linux
 
 ```bash
 curl https://raw.githubusercontent.com/0xleft/gal/main/install.sh | sudo bash
-gal --help
+gal
 ```
 
 ## Hello world ❤️
@@ -31,6 +29,10 @@ end
 ` or could also be written in one line
 lowkey main{};fire std.println("hello world");end
 ```
+
+## Docs
+
+Documentation [docs](docs/README.md) folder.
 
 ## Build from source
 
