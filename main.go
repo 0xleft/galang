@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -13,19 +14,30 @@ import (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println(r)
+			fmt.Print("Error:", r)
 		}
 	}()
 
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: genalphalang <filename>")
+	inlineScript := flag.String("c", "", "Inline script to run")
+
+	flag.Parse()
+	args := flag.Args()
+
+	if *inlineScript == "" && len(args) == 0 {
+		fmt.Print("Usage: gal <filename>")
 		return
 	}
 
-	filename := os.Args[1]
+	if *inlineScript != "" {
+		tokens := lexer.Lex(*inlineScript)
+		ast := parser.Parse(tokens)
+		interpreter.Interpret(&ast, []string{})
+		return
+	}
 
+	filename := args[0]
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast, os.Args[1:])
+	interpreter.Interpret(&ast, os.Args)
 }

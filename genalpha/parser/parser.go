@@ -55,7 +55,7 @@ type ParserState struct {
 
 // just a huge state machine
 func Parse(tokens []genalphatypes.Token) genalphatypes.ASTNode {
-	var parserState = ParserState{
+	parserState := ParserState{
 		ProgramState: ProgramStateNormal,
 		ASTRoot: genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeProgram,
@@ -359,8 +359,8 @@ func parseIfWhile(parserState *ParserState, token genalphatypes.Token) bool {
 	if (token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordIf) && parserState.ProgramState == ProgramStateNormal) ||
 		(token.Type == genalphatypes.TokenTypeKeyword && token.Value == string(genalphatypes.KeywordWhile) && parserState.ProgramState == ProgramStateNormal) {
 		parserState.ASTNodeStack = append(parserState.ASTNodeStack, parserState.ASTNodeParent)
-		var nodeType = genalphatypes.ASTNodeTypeIf
-		var programState = ProgramStateIf
+		nodeType := genalphatypes.ASTNodeTypeIf
+		programState := ProgramStateIf
 		if token.Value == string(genalphatypes.KeywordWhile) {
 			nodeType = genalphatypes.ASTNodeTypeWhile
 			programState = ProgramStateWhile
@@ -609,7 +609,7 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token genalphatypes
 	if parserState.ProgramState == ProgramStateFunctionDeclaration {
 		// args and function name
 		if token.Type == genalphatypes.TokenTypeIdentifier && !parserState.IsFuncBlock {
-			var identType = genalphatypes.ASTNodeTypeIdentifier
+			identType := genalphatypes.ASTNodeTypeIdentifier
 			if parserState.IsArgList {
 				identType = genalphatypes.ASTNodeTypeFunctionArgument
 			}
@@ -655,7 +655,7 @@ func parseFunctionDeclarationLogic(parserState *ParserState, token genalphatypes
 }
 
 func parseExpression(parserState *ParserState, token genalphatypes.Token, expression *genalphatypes.ASTNode) bool {
-	var exprNode = &parserState.ASTNodeExpr
+	exprNode := &parserState.ASTNodeExpr
 	if expression != nil {
 		exprNode = expression
 	}
@@ -738,7 +738,7 @@ func fixExpression(expression *genalphatypes.ASTNode) {
 
 // basicaly just merge operator if there is 2 in a row
 func fixOperators(expression *genalphatypes.ASTNode) {
-	var i int
+	i := 0
 	for {
 		if i >= len(expression.Children) {
 			break
@@ -763,7 +763,7 @@ func fixOperators(expression *genalphatypes.ASTNode) {
 }
 
 func makeBlocks(expression *genalphatypes.ASTNode) {
-	var block = genalphatypes.ASTNode{
+	block := genalphatypes.ASTNode{
 		Type: genalphatypes.ASTNodeTypeBlock,
 	}
 
@@ -792,7 +792,7 @@ func makeBlocks(expression *genalphatypes.ASTNode) {
 			blockStart := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 
-			var astCopy = slices.Clone(expression.Children)
+			astCopy := slices.Clone(expression.Children)
 			block.Children = astCopy[blockStart+1 : i]
 
 			expression.Children = append(expression.Children[:blockStart], block)
@@ -808,9 +808,9 @@ func makeBlocks(expression *genalphatypes.ASTNode) {
 }
 
 func binarySplit(expression *genalphatypes.ASTNode, where int) {
-	var childrenTemp = slices.Clone(expression.Children)
+	childrenTemp := slices.Clone(expression.Children)
 
-	var binaryBlock = genalphatypes.ASTNode{
+	binaryBlock := genalphatypes.ASTNode{
 		Type:  genalphatypes.ASTNodeTypeBinaryOperation,
 		Value: expression.Children[where].Value,
 		Children: []genalphatypes.ASTNode{
@@ -833,9 +833,8 @@ func binarySplit(expression *genalphatypes.ASTNode, where int) {
 }
 
 func orderOperations(expression *genalphatypes.ASTNode) {
-	var i int
-
-	var operationType = 0
+	i := 0
+	operationType := 0
 
 	for {
 		if i >= len(expression.Children) {
@@ -888,7 +887,7 @@ func orderOperations(expression *genalphatypes.ASTNode) {
 				}
 			case 5:
 				if expression.Children[i].Value == "!" {
-					var unaryBlock = genalphatypes.ASTNode{
+					unaryBlock := genalphatypes.ASTNode{
 						Type:  genalphatypes.ASTNodeTypeUnaryOperation,
 						Value: expression.Children[i].Value,
 						Children: []genalphatypes.ASTNode{

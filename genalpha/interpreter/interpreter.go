@@ -28,8 +28,9 @@ type Function struct {
 }
 
 type Result struct {
-	Type  genalphatypes.ASTNodeType
-	Value string
+	Type   genalphatypes.ASTNodeType
+	Value  string
+	Values []Result
 }
 
 type Variable struct {
@@ -48,7 +49,7 @@ type InterpreterState struct {
 }
 
 func Interpret(ast *genalphatypes.ASTNode, args []string) {
-	var interpreterState = InterpreterState{
+	interpreterState := InterpreterState{
 		Functions: map[string]Function{},
 		GlobalScope: Scope{
 			Variables: map[string]Variable{},
@@ -83,7 +84,7 @@ func Interpret(ast *genalphatypes.ASTNode, args []string) {
 	for _, function := range interpreterState.Functions {
 		if function.Name == "main" {
 			for _, instructionNode := range function.Body {
-				var result = interpretNode(&interpreterState, instructionNode)
+				result := interpretNode(&interpreterState, instructionNode)
 				if result.Type != genalphatypes.ASTNodeTypeNone {
 					fmt.Println("Program exited with code:", result.Value)
 					return
@@ -162,9 +163,9 @@ func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNod
 }
 
 func interpretFunctionDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
-	var name = node.Children[0].Value
-	var args = []genalphatypes.ASTNode{}
-	var bodyStart = 1
+	name := node.Children[0].Value
+	args := []genalphatypes.ASTNode{}
+	bodyStart := 1
 	for _, arg := range node.Children {
 		if arg.Type == genalphatypes.ASTNodeTypeFunctionArgument {
 			args = append(args, arg)
@@ -172,7 +173,7 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 		}
 	}
 
-	var function = Function{
+	function := Function{
 		Name: name,
 		Args: args,
 		Body: node.Children[bodyStart:],
@@ -189,7 +190,7 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 	name := node.Children[0].Value
 	variable := interpreterState.LocalScope.Variables[name]
 	index := resolveExpression(interpreterState, node.Children[1])
-	var value = resolveExpression(interpreterState, node.Children[2])
+	value := resolveExpression(interpreterState, node.Children[2])
 
 	if variable.Name != "" {
 		if variable.Indecies == nil {
@@ -305,9 +306,9 @@ func resolveExpression(interpreterState *InterpreterState, node genalphatypes.AS
 }
 
 func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var name = node.Children[0].Value
+	name := node.Children[0].Value
 
-	var variable = interpreterState.LocalScope.Variables[name]
+	variable := interpreterState.LocalScope.Variables[name]
 	if variable.Name == "" {
 		variable = interpreterState.GlobalScope.Variables[name]
 	}
@@ -328,9 +329,9 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 }
 
 func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var name = node.Value
+	name := node.Value
 
-	var result = interpreterState.LocalScope.Variables[name]
+	result := interpreterState.LocalScope.Variables[name]
 	if result.Name == "" {
 		result = interpreterState.GlobalScope.Variables[name]
 	}
@@ -345,8 +346,8 @@ func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.AS
 }
 
 func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var left = resolveExpression(interpreterState, node.Children[0])
-	var right = resolveExpression(interpreterState, node.Children[1])
+	left := resolveExpression(interpreterState, node.Children[0])
+	right := resolveExpression(interpreterState, node.Children[1])
 
 	switch node.Value {
 	case "+":
@@ -418,7 +419,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 		//		panic("Invalid operand types for binary operation ==")
 		//}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if left.Value == right.Value {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -433,7 +434,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 		//	panic("Invalid operand types for binary operation !=")
 		//}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if left.Value != right.Value {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -447,7 +448,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation >")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if utils.ParseNumber(left.Value) > utils.ParseNumber(right.Value) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -461,7 +462,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation <")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if utils.ParseNumber(left.Value) < utils.ParseNumber(right.Value) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -475,7 +476,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation <")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if utils.ParseNumber(left.Value) >= utils.ParseNumber(right.Value) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -489,7 +490,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation <")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if utils.ParseNumber(left.Value) <= utils.ParseNumber(right.Value) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -503,7 +504,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation &&")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if left.Value == string(genalphatypes.KeywordTrue) && right.Value == string(genalphatypes.KeywordTrue) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -517,7 +518,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			panic("Invalid operand type for binary operation ||")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if left.Value == string(genalphatypes.KeywordTrue) || right.Value == string(genalphatypes.KeywordTrue) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -532,7 +533,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 }
 
 func resolveUnaryOperation(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var operand = resolveExpression(interpreterState, node.Children[0])
+	operand := resolveExpression(interpreterState, node.Children[0])
 
 	switch node.Value {
 	case "!":
@@ -540,7 +541,7 @@ func resolveUnaryOperation(interpreterState *InterpreterState, node genalphatype
 			panic("Invalid operand type for unary operation !")
 		}
 
-		var value = string(genalphatypes.KeywordFalse)
+		value := string(genalphatypes.KeywordFalse)
 		if operand.Value == string(genalphatypes.KeywordFalse) {
 			value = string(genalphatypes.KeywordTrue)
 		}
@@ -555,40 +556,41 @@ func resolveUnaryOperation(interpreterState *InterpreterState, node genalphatype
 }
 
 func resolveStdFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var name = node.Children[0].Value
+	name := node.Children[0].Value
 
-	var stdFunction = STDFunctions[name] // from std.go
+	stdFunction := STDFunctions[name] // from std.go
 	if stdFunction == nil {
 		panic("Function " + name + " not found")
 	}
 
-	var args = []string{}
+	args := []Result{}
 	for _, argNode := range node.Children[1:] {
-		var arg = resolveExpression(interpreterState, argNode)
-		args = append(args, arg.Value)
+		arg := resolveExpression(interpreterState, argNode)
+		args = append(args, arg)
 	}
 
 	return stdFunction(args)
 }
 
 func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
-	var name = node.Children[0].Value
+	name := node.Children[0].Value
 
-	var function = interpreterState.Functions[name]
+	function := interpreterState.Functions[name]
 	if function.Name == "" {
 		return resolveStdFunctionCall(interpreterState, node)
 	}
 
+	// todo check if actualy correct?
 	if len(function.Args) > len(node.Children)-1 {
 		panic("Invalid number of arguments for function " + name)
 	}
 
-	var scope = Scope{
+	scope := Scope{
 		Variables: map[string]Variable{},
 	}
 
 	for i, arg := range function.Args {
-		var argValue = resolveExpression(interpreterState, node.Children[i+1])
+		argValue := resolveExpression(interpreterState, node.Children[i+1])
 		scope.Variables[arg.Value] = Variable{
 			Name:  arg.Value,
 			Type:  argValue.Type, // todo is this correct?
@@ -598,7 +600,7 @@ func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.
 
 	newScope(interpreterState, scope)
 	for _, instructionNode := range function.Body {
-		var result = interpretNode(interpreterState, instructionNode)
+		result := interpretNode(interpreterState, instructionNode)
 		if result.Type != genalphatypes.ASTNodeTypeNone {
 			popScope(interpreterState)
 			return result
@@ -625,7 +627,7 @@ func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode)
 
 	if condition.Value == string(genalphatypes.KeywordTrue) {
 		for _, instructionNode := range node.Children[1:] {
-			var result = interpretNode(interpreterState, instructionNode)
+			result := interpretNode(interpreterState, instructionNode)
 			if result.Type != genalphatypes.ASTNodeTypeNone {
 				return result
 			}
@@ -650,7 +652,7 @@ func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNo
 		}
 
 		for _, instructionNode := range node.Children[1:] {
-			var result = interpretNode(interpreterState, instructionNode)
+			result := interpretNode(interpreterState, instructionNode)
 			if result.Type != genalphatypes.ASTNodeTypeNone {
 				return result
 			}
@@ -676,13 +678,13 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 		panic("import should be done with one argument, the file to import, such as 'gyat \"test.gal\"'")
 	}
 
-	var filename = node.Children[0].Value
-	var isString = node.Children[0].Type == genalphatypes.ASTNodeTypeString
+	filename := node.Children[0].Value
+	isString := node.Children[0].Type == genalphatypes.ASTNodeTypeString
 	if !isString {
 		panic("import should be done with a string argument, the file to import, such as 'gyat \"test.gal\"'")
 	}
 
-	var ast = loadAST(filename)
+	ast := loadAST(filename)
 	for _, child := range ast.Children {
 		interpretNode(interpreterState, child)
 	}
@@ -694,47 +696,89 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 }
 
 func interpretVariableDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
-	var name = node.Children[0].Value
-	var value = resolveExpression(interpreterState, node.Children[1])
+	name := node.Children[0].Value
+	value := resolveExpression(interpreterState, node.Children[1])
+
+	indecies := map[string]Variable{}
+	if value.Values != nil {
+		for i, value := range value.Values {
+			indecies[fmt.Sprint(i)] = Variable{
+				Name:  name,
+				Type:  value.Type,
+				Value: value.Value,
+			}
+		}
+	}
 
 	if strings.HasPrefix(name, "GLOBAL_") {
+
 		interpreterState.GlobalScope.Variables[name] = Variable{
-			Name:  name,
-			Type:  value.Type,
-			Value: value.Value,
+			Name:     name,
+			Type:     value.Type,
+			Value:    value.Value,
+			Indecies: indecies,
 		}
 		return
 	}
 
 	interpreterState.LocalScope.Variables[name] = Variable{
-		Name:  name,
-		Type:  value.Type,
-		Value: value.Value,
+		Name:     name,
+		Type:     value.Type,
+		Value:    value.Value,
+		Indecies: indecies,
 	}
 }
 
 func interpretVariableAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
-	var name = node.Children[0].Value
-	var value = resolveExpression(interpreterState, node.Children[1])
+	name := node.Children[0].Value
+	value := resolveExpression(interpreterState, node.Children[1])
 
 	variable := interpreterState.LocalScope.Variables[name]
 	if variable.Name != "" {
+
+		originalIndecies := variable.Indecies
+
+		// add values to the indecies
+		if value.Values != nil {
+			for i, value := range value.Values {
+				originalIndecies[fmt.Sprint(i)] = Variable{
+					Name:  name,
+					Type:  value.Type,
+					Value: value.Value,
+				}
+			}
+		}
+
 		interpreterState.LocalScope.Variables[name] = Variable{
 			Name:     name,
 			Type:     value.Type,
 			Value:    value.Value,
-			Indecies: variable.Indecies,
+			Indecies: originalIndecies,
 		}
 		return
 	}
 
 	variable = interpreterState.GlobalScope.Variables[name]
 	if variable.Name != "" {
+
+		originalIndecies := variable.Indecies
+
+		// add values to the indecies
+		if value.Values != nil {
+			for i, value := range value.Values {
+				originalIndecies[fmt.Sprint(i)] = Variable{
+					Name:  name,
+					Type:  value.Type,
+					Value: value.Value,
+				}
+			}
+		}
+
 		interpreterState.GlobalScope.Variables[name] = Variable{
 			Name:     name,
 			Type:     value.Type,
 			Value:    value.Value,
-			Indecies: variable.Indecies,
+			Indecies: originalIndecies,
 		}
 		return
 	}
@@ -744,7 +788,7 @@ func interpretVariableAssignment(interpreterState *InterpreterState, node genalp
 
 // returns the sha256 hash of the given ast
 func sha256Hash(content string) string {
-	var shaBytes = sha256.Sum256([]byte(content))
+	shaBytes := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(shaBytes[:])
 }
 
@@ -817,12 +861,12 @@ func readNotFirstLineFile(filename string) []byte {
 
 // load and save are for when importing new files so we dont have to lex and parse them again (optimization and easier to work with)
 func loadAST(filename string) genalphatypes.ASTNode {
-	var firstLine = readFirstLineFile(filename + "+")
+	firstLine := readFirstLineFile(filename + "+")
 	if firstLine == "" {
 		// parse here and then save the ast
-		var contents = utils.ReadContents(filename)
-		var tokens = lexer.Lex(contents)
-		var ast = parser.Parse(tokens)
+		contents := utils.ReadContents(filename)
+		tokens := lexer.Lex(contents)
+		ast := parser.Parse(tokens)
 		saveAST(ast, filename, filename+"+")
 
 		return ast
@@ -842,14 +886,14 @@ func saveAST(ast genalphatypes.ASTNode, sourceFilename string, filename string) 
 	// - the rest of the ast in gob format
 
 	// first we need to get the sha256 hash of the ast
-	var contents = utils.ReadContents(sourceFilename)
-	var sha = sha256Hash(contents)
+	contents := utils.ReadContents(sourceFilename)
+	sha := sha256Hash(contents)
 	if readFirstLineFile(filename) == sha {
 		return
 	}
 
 	// replace any new lines with \\n
-	var bytes = string(getNodeBytes(ast))
+	bytes := string(getNodeBytes(ast))
 	bytes = strings.ReplaceAll(bytes, "\n", "\\n")
 
 	writeToFile(filename, sha+"\n"+bytes)

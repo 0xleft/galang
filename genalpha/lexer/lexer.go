@@ -31,8 +31,8 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 	var inString bool
 	var inComment bool
 
-	var i = 0
 	var char byte
+	i := 0
 
 	for {
 		if i >= len(line) {
@@ -136,7 +136,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 				continue
 			}
 
-			var added = false
+			added := false
 			for j := i + 1; j < len(line); j++ {
 				if line[j] >= '0' && line[j] <= '9' || line[j] == '.' {
 					continue
@@ -196,7 +196,7 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 				continue
 			}
 
-			var added = false
+			added := false
 			for j := i + 1; j < len(line); j++ {
 				if line[j] >= 'a' && line[j] <= 'z' || line[j] >= 'A' && line[j] <= 'Z' || line[j] >= '0' && line[j] <= '9' || line[j] == '_' || line[j] == '.' {
 					continue
