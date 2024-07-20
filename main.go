@@ -14,7 +14,7 @@ import (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Print("Error:", r)
+			fmt.Print("Error: ", r)
 		}
 	}()
 
@@ -28,10 +28,12 @@ func main() {
 		return
 	}
 
+	currentDir, _ := os.Getwd()
+
 	if *inlineScript != "" {
 		tokens := lexer.Lex(*inlineScript)
 		ast := parser.Parse(tokens)
-		interpreter.Interpret(&ast, []string{})
+		interpreter.Interpret(&ast, []string{}, currentDir)
 		return
 	}
 
@@ -39,5 +41,5 @@ func main() {
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast, os.Args)
+	interpreter.Interpret(&ast, os.Args, currentDir+"/"+filename)
 }

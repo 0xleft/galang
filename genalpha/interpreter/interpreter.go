@@ -46,9 +46,11 @@ type InterpreterState struct {
 	ScopeStack  []Scope
 	LocalScope  Scope
 	GlobalScope Scope
+
+	ImportedFiles []string
 }
 
-func Interpret(ast *genalphatypes.ASTNode, args []string) {
+func Interpret(ast *genalphatypes.ASTNode, args []string, filename string) {
 	interpreterState := InterpreterState{
 		Functions: map[string]Function{},
 		GlobalScope: Scope{
@@ -78,13 +80,13 @@ func Interpret(ast *genalphatypes.ASTNode, args []string) {
 	}
 
 	for _, child := range ast.Children {
-		interpretNode(&interpreterState, child)
+		interpretNode(&interpreterState, child, filename)
 	}
 
 	for _, function := range interpreterState.Functions {
 		if function.Name == "main" {
 			for _, instructionNode := range function.Body {
-				result := interpretNode(&interpreterState, instructionNode)
+				result := interpretNode(&interpreterState, instructionNode, "")
 				if result.Type != genalphatypes.ASTNodeTypeNone {
 					fmt.Println("Program exited with code:", result.Value)
 					return
@@ -112,7 +114,7 @@ func popScope(interpreterState *InterpreterState) {
 	interpreterState.ScopeStack = interpreterState.ScopeStack[:len(interpreterState.ScopeStack)-1]
 }
 
-func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNode, filename string) Result {
 	switch node.Type {
 	case genalphatypes.ASTNodeTypeMemberAssignment:
 		interpretMemberAssignment(interpreterState, node)
@@ -145,7 +147,7 @@ func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNod
 	case genalphatypes.ASTNodeTypeReturn:
 		return interpretReturn(interpreterState, node)
 	case genalphatypes.ASTNodeTypeImport:
-		interpretImport(interpreterState, node)
+		interpretImport(interpreterState, node, filename)
 		return Result{
 			Type:  genalphatypes.ASTNodeTypeNone,
 			Value: "",
@@ -158,6 +160,7 @@ func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNod
 			Value: "",
 		}
 	default:
+		fmt.Println(node.Type, node.Value, filename)
 		panic("Invalid AST node type" + fmt.Sprint(node.Type))
 	}
 }
@@ -165,13 +168,16 @@ func interpretNode(interpreterState *InterpreterState, node genalphatypes.ASTNod
 func interpretFunctionDeclaration(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
 	name := node.Children[0].Value
 	args := []genalphatypes.ASTNode{}
-	bodyStart := 1
+	bodyStart := 0
+
 	for _, arg := range node.Children {
 		if arg.Type == genalphatypes.ASTNodeTypeFunctionArgument {
 			args = append(args, arg)
 			bodyStart++
 		}
 	}
+
+	bodyStart++
 
 	function := Function{
 		Name: name,
@@ -339,9 +345,18 @@ func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.AS
 		panic("Variable " + name + " not found")
 	}
 
+	values := []Result{}
+	for _, value := range result.Indecies {
+		values = append(values, Result{
+			Type:  value.Type,
+			Value: value.Value,
+		})
+	}
+
 	return Result{
-		Type:  result.Type,
-		Value: result.Value,
+		Type:   result.Type,
+		Value:  result.Value,
+		Values: values,
 	}
 }
 
@@ -591,16 +606,29 @@ func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.
 
 	for i, arg := range function.Args {
 		argValue := resolveExpression(interpreterState, node.Children[i+1])
+
+		values := map[string]Variable{}
+		if argValue.Values != nil {
+			for i, value := range argValue.Values {
+				values[fmt.Sprint(i)] = Variable{
+					Name:  value.Value,
+					Type:  value.Type,
+					Value: value.Value,
+				}
+			}
+		}
+
 		scope.Variables[arg.Value] = Variable{
-			Name:  arg.Value,
-			Type:  argValue.Type, // todo is this correct?
-			Value: argValue.Value,
+			Name:     arg.Value,
+			Type:     argValue.Type, // todo is this correct?
+			Value:    argValue.Value,
+			Indecies: values,
 		}
 	}
 
 	newScope(interpreterState, scope)
 	for _, instructionNode := range function.Body {
-		result := interpretNode(interpreterState, instructionNode)
+		result := interpretNode(interpreterState, instructionNode, "")
 		if result.Type != genalphatypes.ASTNodeTypeNone {
 			popScope(interpreterState)
 			return result
@@ -627,7 +655,7 @@ func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode)
 
 	if condition.Value == string(genalphatypes.KeywordTrue) {
 		for _, instructionNode := range node.Children[1:] {
-			result := interpretNode(interpreterState, instructionNode)
+			result := interpretNode(interpreterState, instructionNode, "")
 			if result.Type != genalphatypes.ASTNodeTypeNone {
 				return result
 			}
@@ -652,7 +680,7 @@ func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNo
 		}
 
 		for _, instructionNode := range node.Children[1:] {
-			result := interpretNode(interpreterState, instructionNode)
+			result := interpretNode(interpreterState, instructionNode, "")
 			if result.Type != genalphatypes.ASTNodeTypeNone {
 				return result
 			}
@@ -673,20 +701,31 @@ func interpretReturn(interpreterState *InterpreterState, node genalphatypes.ASTN
 	return resolveExpression(interpreterState, node.Children[0])
 }
 
-func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
+func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTNode, parentFilename string) Result {
 	if len(node.Children) != 1 {
 		panic("import should be done with one argument, the file to import, such as 'gyat \"test.gal\"'")
 	}
 
 	filename := node.Children[0].Value
+	importedFilename := parentFilename + "/../" + filename
 	isString := node.Children[0].Type == genalphatypes.ASTNodeTypeString
 	if !isString {
 		panic("import should be done with a string argument, the file to import, such as 'gyat \"test.gal\"'")
 	}
 
-	ast := loadAST(filename)
+	for _, importedFile := range interpreterState.ImportedFiles {
+		if importedFile == importedFilename {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+	}
+
+	interpreterState.ImportedFiles = append(interpreterState.ImportedFiles, importedFilename)
+	ast := loadAST(importedFilename)
 	for _, child := range ast.Children {
-		interpretNode(interpreterState, child)
+		interpretNode(interpreterState, child, importedFilename)
 	}
 
 	return Result{
@@ -711,7 +750,6 @@ func interpretVariableDeclaration(interpreterState *InterpreterState, node genal
 	}
 
 	if strings.HasPrefix(name, "GLOBAL_") {
-
 		interpreterState.GlobalScope.Variables[name] = Variable{
 			Name:     name,
 			Type:     value.Type,
@@ -810,7 +848,7 @@ func getNodeFromBytes(nodeBytes []byte) genalphatypes.ASTNode {
 
 	err := dec.Decode(&node)
 	if err != nil {
-		panic("Error decoding node")
+		panic(err)
 	}
 
 	return node
@@ -846,17 +884,17 @@ func writeToFile(filename string, data string) {
 }
 
 // get everything except the first line of the file
-func readNotFirstLineFile(filename string) []byte {
+func readNotFirstLineFile(filename string) string {
 	file, err := os.Open(filename)
 	if err != nil {
-		return []byte{}
+		panic(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	scanner.Scan()
 	scanner.Scan()
-	return scanner.Bytes()
+	return scanner.Text()
 }
 
 // load and save are for when importing new files so we dont have to lex and parse them again (optimization and easier to work with)
@@ -868,16 +906,17 @@ func loadAST(filename string) genalphatypes.ASTNode {
 		tokens := lexer.Lex(contents)
 		ast := parser.Parse(tokens)
 		saveAST(ast, filename, filename+"+")
-
 		return ast
 	}
 
 	node := readNotFirstLineFile(filename + "+")
+	node = strings.ReplaceAll(node, "\\n", "\n")
+
 	if len(node) == 0 {
-		return genalphatypes.ASTNode{}
+		panic("Error reading ast from file")
 	}
 
-	return getNodeFromBytes(node)
+	return getNodeFromBytes([]byte(node))
 }
 
 func saveAST(ast genalphatypes.ASTNode, sourceFilename string, filename string) {
