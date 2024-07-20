@@ -573,6 +573,9 @@ func parseFunctionCall(parserState *ParserState, token genalphatypes.Token) bool
 				}
 				fixExpression(&parserState.ASTNodeExpr)
 				parserState.ASTNodeCall.Children = append(parserState.ASTNodeCall.Children, parserState.ASTNodeExpr)
+				parserState.ASTNodeExpr = genalphatypes.ASTNode{
+					Type: genalphatypes.ASTNodeTypeExpression,
+				}
 				return true
 			}
 

@@ -2,6 +2,8 @@ package interpreter
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
@@ -70,6 +72,87 @@ var STDFunctions = map[string]STDFunction{
 			Type:   genalphatypes.ASTNodeTypeArray,
 			Value:  fmt.Sprint(len(results)),
 			Values: results,
+		}
+	},
+	"std.join": func(args []Result) Result {
+		if len(args) != 2 {
+			panic("std.join expects exactly 2 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeArray && args[1].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.join expects array and string arguments")
+		}
+
+		array := args[0]
+		separator := args[1]
+
+		parts := make([]string, len(array.Values))
+		for i, part := range array.Values {
+			parts[i] = part.Value
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: strings.Join(parts, separator.Value),
+		}
+	},
+	"std.read": func(args []Result) Result {
+		if len(args) != 1 {
+			panic("std.read expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.read expects string argument")
+		}
+
+		file, err := os.Open(args[0].Value)
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+		defer file.Close()
+
+		contents, err := io.ReadAll(file)
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: string(contents),
+		}
+	},
+	"std.write": func(args []Result) Result {
+		if len(args) != 2 {
+			panic("std.write expects exactly 2 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.write expects string arguments")
+		}
+
+		file, err := os.Create(args[0].Value)
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordFalse),
+			}
+		}
+		defer file.Close()
+
+		_, err = file.WriteString(args[1].Value)
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordFalse),
+			}
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: string(genalphatypes.KeywordTrue),
 		}
 	},
 }
