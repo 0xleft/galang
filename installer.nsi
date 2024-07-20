@@ -2,7 +2,7 @@
 !define COMPANYNAME "0xleft"
 !define DESCRIPTION "Gen alphalang programming language"
 !define VERSIONMAJOR 1
-!define VERSIONMINOR 0
+!define VERSIONMINOR 1
 !define VERSIONBUILD 0
 !define HELPURL "https://github.com/0xleft/gal/issues" # "Support Information" link
 !define UPDATEURL "https://github.com/0xleft/gal/releases/latest/download/gal_installer.exe" # "Product Updates" link
