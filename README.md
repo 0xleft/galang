@@ -2,6 +2,9 @@
 
 A programming language featuring simple AST generation and interpreter
 
+> Note:
+> This project is in very early changes in development expect drastic api changes and fixes.
+
 ## Install
 
 ### Windows
