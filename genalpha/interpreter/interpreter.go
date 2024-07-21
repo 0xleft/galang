@@ -429,10 +429,22 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			Value: fmt.Sprint(int(utils.ParseNumber(left.Value)) % int(utils.ParseNumber(right.Value))),
 		}
 	case "==":
-		// todo decide
-		//if left.Type != right.Type {
-		//		panic("Invalid operand types for binary operation ==")
-		//}
+		value := string(genalphatypes.KeywordFalse)
+		if left.Value == right.Value {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
+	case "===":
+		if left.Type != right.Type {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordFalse),
+			}
+		}
 
 		value := string(genalphatypes.KeywordFalse)
 		if left.Value == right.Value {
@@ -444,10 +456,22 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			Value: value,
 		}
 	case "!=":
-		// todo decide
-		//if left.Type != right.Type {
-		//	panic("Invalid operand types for binary operation !=")
-		//}
+		value := string(genalphatypes.KeywordFalse)
+		if left.Value != right.Value {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
+		}
+	case "!==":
+		if left.Type != right.Type {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordTrue),
+			}
+		}
 
 		value := string(genalphatypes.KeywordFalse)
 		if left.Value != right.Value {
@@ -650,7 +674,7 @@ func interpretBlock(interpreterState *InterpreterState, node genalphatypes.ASTNo
 func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode) Result {
 	condition := resolveExpression(interpreterState, node.Children[0])
 	if condition.Type != genalphatypes.ASTNodeTypeBoolean {
-		panic("Invalid condition type for if statement")
+		panic("Invalid condition type for if statement, got: " + condition.Value)
 	}
 
 	if condition.Value == string(genalphatypes.KeywordTrue) {

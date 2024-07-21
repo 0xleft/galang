@@ -874,7 +874,7 @@ func orderOperations(expression *genalphatypes.ASTNode) {
 					i = 0
 				}
 			case 2:
-				if expression.Children[i].Value == "==" || expression.Children[i].Value == "!=" || expression.Children[i].Value == "<" || expression.Children[i].Value == ">" || expression.Children[i].Value == "<=" || expression.Children[i].Value == ">=" {
+				if expression.Children[i].Value == "==" || expression.Children[i].Value == "!=" || expression.Children[i].Value == "<" || expression.Children[i].Value == ">" || expression.Children[i].Value == "<=" || expression.Children[i].Value == ">=" || expression.Children[i].Value == "===" || expression.Children[i].Value == "!==" {
 					binarySplit(expression, i)
 					i = 0
 				}
