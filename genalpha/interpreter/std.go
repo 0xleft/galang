@@ -159,6 +159,27 @@ var STDFunctions = map[string]STDFunction{
 			Value: string(genalphatypes.KeywordTrue),
 		}
 	},
+	"std.exists": func(args []Variable) Variable {
+		if len(args) != 1 {
+			panic("std.exists expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.exists expects string argument")
+		}
+
+		_, err := os.Stat(args[0].Value)
+		if err != nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordFalse),
+			}
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: string(genalphatypes.KeywordTrue),
+		}
+	},
 	"std.shell": func(args []Variable) Variable {
 		if len(args) != 1 {
 			panic("std.shell expects exactly 1 argument")
