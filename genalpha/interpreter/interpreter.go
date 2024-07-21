@@ -18,7 +18,7 @@ import (
 )
 
 type Scope struct {
-	Variables map[string]Variable
+	Variables map[string]*Variable
 }
 
 type Function struct {
@@ -47,14 +47,14 @@ func Interpret(ast *genalphatypes.ASTNode, args []string, filename string) {
 	interpreterState := InterpreterState{
 		Functions: map[string]Function{},
 		GlobalScope: Scope{
-			Variables: map[string]Variable{},
+			Variables: map[string]*Variable{},
 		},
 		LocalScope: Scope{
-			Variables: map[string]Variable{},
+			Variables: map[string]*Variable{},
 		},
 	}
 
-	interpreterState.LocalScope.Variables["args"] = Variable{
+	interpreterState.LocalScope.Variables["args"] = &Variable{
 		Type:     genalphatypes.ASTNodeTypeNumber,
 		Value:    fmt.Sprint(len(args)),
 		Indecies: map[string]*Variable{},
@@ -77,9 +77,9 @@ func Interpret(ast *genalphatypes.ASTNode, args []string, filename string) {
 	for _, function := range interpreterState.Functions {
 		if function.Name == "main" {
 			for _, instructionNode := range function.Body {
-				Variable := interpretNode(&interpreterState, instructionNode, "")
-				if Variable.Type != genalphatypes.ASTNodeTypeNone {
-					fmt.Println("Program exited with code:", Variable.Value)
+				variable := interpretNode(&interpreterState, instructionNode, "")
+				if variable.Type != genalphatypes.ASTNodeTypeNone {
+					fmt.Println("Program exited with code:", variable.Value)
 					return
 				}
 			}
@@ -189,7 +189,7 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 	value := resolveExpression(interpreterState, node.Children[2])
 
 	variable := interpreterState.LocalScope.Variables[name]
-	if variable.Type != genalphatypes.ASTNodeTypeNone {
+	if variable != nil {
 		if variable.Indecies == nil {
 			variable.Indecies = map[string]*Variable{}
 		}
@@ -208,7 +208,7 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 	}
 
 	variable = interpreterState.GlobalScope.Variables[name]
-	if variable.Type != genalphatypes.ASTNodeTypeNone {
+	if variable != nil {
 		if variable.Indecies == nil {
 			variable.Indecies = map[string]*Variable{}
 		}
@@ -304,10 +304,10 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 	name := node.Children[0].Value
 
 	variable := interpreterState.LocalScope.Variables[name]
-	if variable.Type == genalphatypes.ASTNodeTypeNone {
+	if variable == nil {
 		variable = interpreterState.GlobalScope.Variables[name]
 	}
-	if variable.Type == genalphatypes.ASTNodeTypeNone {
+	if variable == nil {
 		panic("Variable " + name + " not found")
 	}
 
@@ -328,14 +328,14 @@ func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.AS
 	name := node.Value
 
 	variable := interpreterState.LocalScope.Variables[name]
-	if variable.Type == genalphatypes.ASTNodeTypeNone {
+	if variable == nil {
 		variable = interpreterState.GlobalScope.Variables[name]
 	}
-	if variable.Type == genalphatypes.ASTNodeTypeNone {
+	if variable == nil {
 		panic("Variable " + name + " not found")
 	}
 
-	return variable
+	return *variable
 }
 
 func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatypes.ASTNode) Variable {
@@ -603,20 +603,20 @@ func resolveFunctionCall(interpreterState *InterpreterState, node genalphatypes.
 	}
 
 	scope := Scope{
-		Variables: map[string]Variable{},
+		Variables: map[string]*Variable{},
 	}
 
 	for i, arg := range function.Args {
 		argValue := resolveExpression(interpreterState, node.Children[i+1])
-		scope.Variables[arg.Value] = argValue
+		scope.Variables[arg.Value] = &argValue
 	}
 
 	newScope(interpreterState, scope)
 	for _, instructionNode := range function.Body {
-		Variable := interpretNode(interpreterState, instructionNode, "")
-		if Variable.Type != genalphatypes.ASTNodeTypeNone {
+		variable := interpretNode(interpreterState, instructionNode, "")
+		if variable.Type != genalphatypes.ASTNodeTypeNone {
 			popScope(interpreterState)
-			return Variable
+			return variable
 		}
 	}
 	popScope(interpreterState)
@@ -640,9 +640,9 @@ func interpretIf(interpreterState *InterpreterState, node genalphatypes.ASTNode)
 
 	if condition.Value == string(genalphatypes.KeywordTrue) {
 		for _, instructionNode := range node.Children[1:] {
-			Variable := interpretNode(interpreterState, instructionNode, "")
-			if Variable.Type != genalphatypes.ASTNodeTypeNone {
-				return Variable
+			variable := interpretNode(interpreterState, instructionNode, "")
+			if variable.Type != genalphatypes.ASTNodeTypeNone {
+				return variable
 			}
 		}
 	}
@@ -665,9 +665,9 @@ func interpretWhile(interpreterState *InterpreterState, node genalphatypes.ASTNo
 		}
 
 		for _, instructionNode := range node.Children[1:] {
-			Variable := interpretNode(interpreterState, instructionNode, "")
-			if Variable.Type != genalphatypes.ASTNodeTypeNone {
-				return Variable
+			variable := interpretNode(interpreterState, instructionNode, "")
+			if variable.Type != genalphatypes.ASTNodeTypeNone {
+				return variable
 			}
 		}
 	}
@@ -742,11 +742,11 @@ func interpretVariableDeclaration(interpreterState *InterpreterState, node genal
 	value := resolveExpression(interpreterState, node.Children[1])
 
 	if strings.HasPrefix(name, "GLOBAL_") {
-		interpreterState.GlobalScope.Variables[name] = value
+		interpreterState.GlobalScope.Variables[name] = &value
 		return
 	}
 
-	interpreterState.LocalScope.Variables[name] = value
+	interpreterState.LocalScope.Variables[name] = &value
 }
 
 func interpretVariableAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) {
@@ -754,32 +754,31 @@ func interpretVariableAssignment(interpreterState *InterpreterState, node genalp
 	value := resolveExpression(interpreterState, node.Children[1])
 
 	variable := interpreterState.LocalScope.Variables[name]
-	if variable.Type != genalphatypes.ASTNodeTypeNone {
-
+	if variable != nil {
 		originalIndecies := variable.Indecies
 		for key, val := range value.Indecies {
-			if val.Type != genalphatypes.ASTNodeTypeNone {
+			if val != nil {
 				originalIndecies[key] = val
 			}
 		}
 
 		value.Indecies = originalIndecies
-		interpreterState.LocalScope.Variables[name] = value
+		interpreterState.LocalScope.Variables[name] = &value
 		return
 	}
 
 	variable = interpreterState.GlobalScope.Variables[name]
-	if variable.Type != genalphatypes.ASTNodeTypeNone {
+	if variable != nil {
 
 		originalIndecies := variable.Indecies
 		for key, val := range value.Indecies {
-			if val.Type != genalphatypes.ASTNodeTypeNone {
+			if val != nil {
 				originalIndecies[key] = val
 			}
 		}
 
 		value.Indecies = originalIndecies
-		interpreterState.GlobalScope.Variables[name] = value
+		interpreterState.GlobalScope.Variables[name] = &value
 		return
 	}
 
