@@ -4,7 +4,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
+
+	"golang.org/x/term"
 
 	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
 )
@@ -153,6 +157,72 @@ var STDFunctions = map[string]STDFunction{
 		return Result{
 			Type:  genalphatypes.ASTNodeTypeBoolean,
 			Value: string(genalphatypes.KeywordTrue),
+		}
+	},
+	"std.shell": func(args []Result) Result {
+		if len(args) != 1 {
+			panic("std.shell expects exactly 1 argument")
+		}
+
+		cmd := exec.Command(args[0].Value)
+		output, err := cmd.Output()
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeString,
+				Value: err.Error(),
+			}
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: string(output),
+		}
+	},
+	"std.input": func(args []Result) Result {
+		if len(args) != 2 {
+			panic("std.input expects exactly 2 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeNumber {
+			panic("std.inputln expects string and a number argument")
+		}
+
+		length, err := strconv.Atoi(args[1].Value)
+		if err != nil {
+			panic("std.inputln expects a number argument")
+		}
+
+		fmt.Print(args[0].Value)
+
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeString,
+				Value: "",
+			}
+		}
+		defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+		b := make([]byte, length)
+		for i := 0; i < length; i++ {
+			_, err := os.Stdin.Read(b[i : i+1])
+			if err != nil {
+				return Result{
+					Type:  genalphatypes.ASTNodeTypeString,
+					Value: "",
+				}
+			}
+		}
+
+		if err != nil {
+			return Result{
+				Type:  genalphatypes.ASTNodeTypeString,
+				Value: "",
+			}
+		}
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: string(b),
 		}
 	},
 }
