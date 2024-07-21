@@ -731,21 +731,21 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 	}
 
 	filename := node.Children[0].Value
+	newFilename := parentFilename[:strings.LastIndex(parentFilename, "/")]
 
-	importedFilename := parentFilename + "/" + filename
+	importedFilename := newFilename + "/" + filename
 	if !strings.HasSuffix(filename, ".gal") {
 		// this means we are importing a package
 		// check in the parent directory
 		// remove filename from parentFilename
 
-		importedFilename = parentFilename + "/" + filename + "/__.gal"
+		importedFilename = newFilename + "/" + filename + "/__.gal"
 		if !utils.FileExists(importedFilename) {
 			// check the installed packages directory
 			importedFilename = utils.GetInstalledPackagesDirectory() + filename + "/__.gal"
 			if !utils.FileExists(importedFilename) {
 				fmt.Println(importedFilename)
-				fmt.Println()
-				panic("Package " + filename + " not found" + " in " + parentFilename)
+				panic("Package " + filename + " not found" + " in " + newFilename)
 			}
 		}
 	}
@@ -947,7 +947,7 @@ func loadAST(filename string) genalphatypes.ASTNode {
 		contents := utils.ReadContents(filename)
 		tokens := lexer.Lex(contents)
 		ast := parser.Parse(tokens)
-		saveAST(ast, filename, filename+"+")
+		// saveAST(ast, filename, filename+"+")
 		return ast
 	}
 
