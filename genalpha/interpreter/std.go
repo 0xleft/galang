@@ -178,6 +178,24 @@ var STDFunctions = map[string]STDFunction{
 			Value: string(output),
 		}
 	},
+	"std.inputln": func(args []Result) Result {
+		if len(args) != 1 {
+			panic("std.inputln expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.inputln expects string argument")
+		}
+
+		fmt.Print(args[0].Value)
+
+		var input string
+		fmt.Scanln(&input)
+
+		return Result{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: input,
+		}
+	},
 	"std.input": func(args []Result) Result {
 		if len(args) != 2 {
 			panic("std.input expects exactly 2 arguments")
