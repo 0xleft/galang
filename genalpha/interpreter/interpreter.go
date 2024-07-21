@@ -707,7 +707,21 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 	}
 
 	filename := node.Children[0].Value
+
 	importedFilename := parentFilename + "/../" + filename
+	if !strings.HasSuffix(filename, ".gal") {
+		// this means we are importing a package
+		// check in the parent directory
+		importedFilename = parentFilename + "/../" + filename + "/__.gal"
+		if !utils.FileExists(importedFilename) {
+			// check the installed packages directory
+			importedFilename = utils.GetInstalledPackagesDirectory() + filename + "/__.gal"
+			if !utils.FileExists(importedFilename) {
+				panic("File " + filename + " not found")
+			}
+		}
+	}
+
 	isString := node.Children[0].Type == genalphatypes.ASTNodeTypeString
 	if !isString {
 		panic("import should be done with a string argument, the file to import, such as 'gyat \"test.gal\"'")

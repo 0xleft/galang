@@ -21,3 +21,8 @@ func ReadContents(filename string) string {
 
 	return string(contents)
 }
+
+func FileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
+}
