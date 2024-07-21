@@ -14,7 +14,7 @@ import (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Print("Error: ", r)
+			fmt.Println("Error: ", r)
 		}
 	}()
 
@@ -24,7 +24,7 @@ func main() {
 	args := flag.Args()
 
 	if *inlineScript == "" && len(args) == 0 {
-		fmt.Print("Usage: gal <filename>")
+		fmt.Println("Usage: gal <filename>")
 		return
 	}
 
