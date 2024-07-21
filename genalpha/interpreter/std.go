@@ -64,9 +64,9 @@ var STDFunctions = map[string]STDFunction{
 
 		parts := strings.Split(toSplit.Value, separator.Value)
 
-		results := map[string]Variable{}
+		results := map[string]*Variable{}
 		for i, part := range parts {
-			results[fmt.Sprint(i)] = Variable{
+			results[fmt.Sprint(i)] = &Variable{
 				Type:  genalphatypes.ASTNodeTypeString,
 				Value: part,
 			}

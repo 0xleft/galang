@@ -30,7 +30,7 @@ type Function struct {
 type Variable struct {
 	Type     genalphatypes.ASTNodeType
 	Value    string
-	Indecies map[string]Variable
+	Indecies map[string]*Variable
 }
 
 type InterpreterState struct {
@@ -57,10 +57,10 @@ func Interpret(ast *genalphatypes.ASTNode, args []string, filename string) {
 	interpreterState.LocalScope.Variables["args"] = Variable{
 		Type:     genalphatypes.ASTNodeTypeNumber,
 		Value:    fmt.Sprint(len(args)),
-		Indecies: map[string]Variable{},
+		Indecies: map[string]*Variable{},
 	}
 	for i, arg := range args {
-		interpreterState.LocalScope.Variables["args"].Indecies[fmt.Sprint(i)] = Variable{
+		interpreterState.LocalScope.Variables["args"].Indecies[fmt.Sprint(i)] = &Variable{
 			Type:  genalphatypes.ASTNodeTypeString,
 			Value: arg,
 		}
@@ -191,10 +191,10 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 
 	if variable.Type != genalphatypes.ASTNodeTypeNone {
 		if variable.Indecies == nil {
-			variable.Indecies = map[string]Variable{}
+			variable.Indecies = map[string]*Variable{}
 		}
 
-		variable.Indecies[index.Value] = Variable{
+		variable.Indecies[index.Value] = &Variable{
 			Type:  value.Type,
 			Value: value.Value,
 		}
@@ -210,10 +210,10 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 	variable = interpreterState.GlobalScope.Variables[name]
 	if variable.Type != genalphatypes.ASTNodeTypeNone {
 		if variable.Indecies == nil {
-			variable.Indecies = map[string]Variable{}
+			variable.Indecies = map[string]*Variable{}
 		}
 
-		variable.Indecies[index.Value] = Variable{
+		variable.Indecies[index.Value] = &Variable{
 			Type:  value.Type,
 			Value: value.Value,
 		}
@@ -312,14 +312,18 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 	}
 
 	index := resolveExpression(interpreterState, node.Children[1])
-	// todo decide
-	//if index.Type != genalphatypes.ASTNodeTypeNumber {
-	//	panic("Invalid index type for member access")
-	//}
+
+	value := variable.Indecies[index.Value]
+	if value == nil {
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeNone,
+			Value: "",
+		}
+	}
 
 	return Variable{
-		Type:  variable.Type,
-		Value: variable.Indecies[index.Value].Value,
+		Type:  value.Type,
+		Value: value.Value,
 	}
 }
 
