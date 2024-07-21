@@ -28,12 +28,10 @@ func main() {
 		return
 	}
 
-	currentDir, _ := os.Getwd()
-
 	if *inlineScript != "" {
 		tokens := lexer.Lex(*inlineScript)
 		ast := parser.Parse(tokens)
-		interpreter.Interpret(&ast, []string{}, currentDir)
+		interpreter.Interpret(&ast, []string{}, "")
 		return
 	}
 
@@ -41,5 +39,5 @@ func main() {
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast, os.Args, currentDir+"/"+filename)
+	interpreter.Interpret(&ast, os.Args, filename)
 }
