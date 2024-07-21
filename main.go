@@ -28,10 +28,15 @@ func main() {
 		return
 	}
 
+	currentDir, err := os.Getwd()
+	if err != nil {
+		panic("Error getting current directory")
+	}
+
 	if *inlineScript != "" {
 		tokens := lexer.Lex(*inlineScript)
 		ast := parser.Parse(tokens)
-		interpreter.Interpret(&ast, []string{}, "")
+		interpreter.Interpret(&ast, []string{}, currentDir)
 		return
 	}
 
@@ -39,5 +44,5 @@ func main() {
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	interpreter.Interpret(&ast, os.Args, filename)
+	interpreter.Interpret(&ast, os.Args, currentDir+"/")
 }

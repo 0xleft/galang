@@ -732,13 +732,13 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 
 	filename := node.Children[0].Value
 
-	importedFilename := parentFilename + "/../" + filename
+	importedFilename := parentFilename + "/" + filename
 	if !strings.HasSuffix(filename, ".gal") {
 		// this means we are importing a package
 		// check in the parent directory
 		// remove filename from parentFilename
-		newFilename := parentFilename[:strings.LastIndex(parentFilename, "/")]
-		importedFilename = newFilename + "/" + filename + "/__.gal"
+
+		importedFilename = parentFilename + "/" + filename + "/__.gal"
 		if !utils.FileExists(importedFilename) {
 			// check the installed packages directory
 			importedFilename = utils.GetInstalledPackagesDirectory() + filename + "/__.gal"
