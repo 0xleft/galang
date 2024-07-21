@@ -748,10 +748,6 @@ func fixOperators(expression *genalphatypes.ASTNode) {
 		}
 
 		if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator {
-			if i == 0 || i == len(expression.Children)-1 {
-				panic("PARSER: Operator at start or end of expression")
-			}
-
 			if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator && expression.Children[i+1].Type == genalphatypes.ASTNodeTypeOperator {
 				expression.Children[i].Value += expression.Children[i+1].Value
 				expression.Children = append(expression.Children[:i+1], expression.Children[i+2:]...)
@@ -858,10 +854,6 @@ func orderOperations(expression *genalphatypes.ASTNode) {
 		}
 
 		if expression.Children[i].Type == genalphatypes.ASTNodeTypeOperator {
-			if i == 0 || i == len(expression.Children)-1 {
-				panic("PARSER: Operator at start or end of expression")
-			}
-
 			switch operationType {
 			case 0:
 				if expression.Children[i].Value == "&&" {

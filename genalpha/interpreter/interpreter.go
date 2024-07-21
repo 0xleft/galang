@@ -185,10 +185,10 @@ func interpretFunctionDeclaration(interpreterState *InterpreterState, node genal
 
 func interpretMemberAssignment(interpreterState *InterpreterState, node genalphatypes.ASTNode) Variable {
 	name := node.Children[0].Value
-	variable := interpreterState.LocalScope.Variables[name]
 	index := resolveExpression(interpreterState, node.Children[1])
 	value := resolveExpression(interpreterState, node.Children[2])
 
+	variable := interpreterState.LocalScope.Variables[name]
 	if variable.Type != genalphatypes.ASTNodeTypeNone {
 		if variable.Indecies == nil {
 			variable.Indecies = map[string]*Variable{}
@@ -321,10 +321,7 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 		}
 	}
 
-	return Variable{
-		Type:  value.Type,
-		Value: value.Value,
-	}
+	return *value
 }
 
 func resolveIdentifier(interpreterState *InterpreterState, node genalphatypes.ASTNode) Variable {

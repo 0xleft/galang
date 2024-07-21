@@ -221,7 +221,7 @@ var STDFunctions = map[string]STDFunction{
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
 			return Variable{
-				Type:  genalphatypes.ASTNodeTypeString,
+				Type:  genalphatypes.ASTNodeTypeNone,
 				Value: "",
 			}
 		}
@@ -231,7 +231,7 @@ var STDFunctions = map[string]STDFunction{
 		_, err = os.Stdin.Read(b)
 		if err != nil {
 			return Variable{
-				Type:  genalphatypes.ASTNodeTypeString,
+				Type:  genalphatypes.ASTNodeTypeNone,
 				Value: "",
 			}
 		}
@@ -283,8 +283,6 @@ var STDFunctions = map[string]STDFunction{
 			}
 		}
 
-		fmt.Println(b, string(b))
-
 		if err != nil {
 			return Variable{
 				Type:  genalphatypes.ASTNodeTypeString,
@@ -295,6 +293,34 @@ var STDFunctions = map[string]STDFunction{
 		return Variable{
 			Type:  genalphatypes.ASTNodeTypeString,
 			Value: string(b),
+		}
+	},
+	"term.term_width": func(args []Variable) Variable {
+		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNumber,
+				Value: "0",
+			}
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprintf("%d", width),
+		}
+	},
+	"term.term_height": func(args []Variable) Variable {
+		_, height, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNumber,
+				Value: "0",
+			}
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprintf("%d", height),
 		}
 	},
 }
