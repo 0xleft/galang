@@ -248,6 +248,28 @@ var STDFunctions = map[string]STDFunction{
 			Value: fmt.Sprintf("%d", b[0]),
 		}
 	},
+	"std.char": func(args []Variable) Variable {
+		// returns a string from a keycode
+		if len(args) != 1 {
+			panic("std.char expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeNumber {
+			panic("std.char expects a number argument")
+		}
+
+		char, err := strconv.Atoi(args[0].Value)
+		if err != nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: string(rune(char)),
+		}
+	},
 	"std.input": func(args []Variable) Variable {
 		if len(args) != 2 {
 			panic("std.input expects exactly 2 arguments")
