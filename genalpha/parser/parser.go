@@ -479,6 +479,12 @@ func parseFunctionCallExpression(parserState *ParserState, token genalphatypes.T
 		parserState.ASTNodeCallExpr = genalphatypes.ASTNode{
 			Type: genalphatypes.ASTNodeTypeFunctionCall,
 		}
+		parserState.ASTNodeExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeExpression,
+		}
+		parserState.ASTNodeCallTempExpr = genalphatypes.ASTNode{
+			Type: genalphatypes.ASTNodeTypeExpression,
+		}
 
 		return true
 	}
