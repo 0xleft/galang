@@ -195,8 +195,9 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 		}
 
 		variable.Indecies[index.Value] = &Variable{
-			Type:  value.Type,
-			Value: value.Value,
+			Type:     value.Type,
+			Value:    value.Value,
+			Indecies: value.Indecies,
 		}
 
 		interpreterState.LocalScope.Variables[name] = variable
@@ -214,8 +215,9 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 		}
 
 		variable.Indecies[index.Value] = &Variable{
-			Type:  value.Type,
-			Value: value.Value,
+			Type:     value.Type,
+			Value:    value.Value,
+			Indecies: value.Indecies,
 		}
 
 		interpreterState.GlobalScope.Variables[name] = variable
@@ -312,8 +314,8 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 	}
 
 	index := resolveExpression(interpreterState, node.Children[1])
-
 	value := variable.Indecies[index.Value]
+
 	if value == nil {
 		return Variable{
 			Type:  genalphatypes.ASTNodeTypeNone,

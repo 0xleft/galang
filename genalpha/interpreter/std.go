@@ -321,9 +321,6 @@ var STDFunctions = map[string]STDFunction{
 		if len(args) != 1 {
 			panic("len expects exactly 1 argument")
 		}
-		if args[0].Type != genalphatypes.ASTNodeTypeArray {
-			panic("len expects an array argument")
-		}
 
 		return Variable{
 			Type:  genalphatypes.ASTNodeTypeNumber,
