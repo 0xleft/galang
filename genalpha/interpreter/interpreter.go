@@ -315,11 +315,13 @@ func resolveMemberAccess(interpreterState *InterpreterState, node genalphatypes.
 
 	index := resolveExpression(interpreterState, node.Children[1])
 	value := variable.Indecies[index.Value]
-
 	if value == nil {
-		return Variable{
-			Type:  genalphatypes.ASTNodeTypeNone,
-			Value: "",
+		value = variable.Indecies[fmt.Sprint(utils.ParseNumber(index.Value))]
+		if value == nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
 		}
 	}
 
