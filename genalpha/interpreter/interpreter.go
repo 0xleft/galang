@@ -358,7 +358,7 @@ func resolveBinaryOperation(interpreterState *InterpreterState, node genalphatyp
 			}
 		default:
 			// todo really?
-			panic("Invalid operand types for binary operation +")
+			panic("Invalid operand types for binary operation +" + " .: got: " + left.Value + " " + right.Value + " and types " + fmt.Sprint(left.Type) + " " + fmt.Sprint(right.Type))
 		}
 
 	case "-":

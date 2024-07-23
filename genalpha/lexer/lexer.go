@@ -56,8 +56,8 @@ func lexLine(line string, lineNum int) []genalphatypes.Token {
 				continue
 			}
 			if char == '"' {
-				replacables := []string{"\\\""}
-				replaces := []string{"\""}
+				replacables := []string{"\\\"", "\\\\", "\\n", "\\t"}
+				replaces := []string{"\"", "\\", "\n", "\t"}
 				finalString := line[tokenStart+1 : i]
 				for j, replacable := range replacables {
 					finalString = strings.ReplaceAll(finalString, replacable, replaces[j])

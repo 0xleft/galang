@@ -270,6 +270,66 @@ var STDFunctions = map[string]STDFunction{
 			Value: string(rune(char)),
 		}
 	},
+	"std.insert": func(args []Variable) Variable {
+		if len(args) != 3 {
+			panic("std.insert expects exactly 3 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeNumber && args[2].Type != genalphatypes.ASTNodeTypeString {
+			panic("std.insert expects string, number, and string arguments")
+		}
+
+		str := args[0].Value
+		index, err := strconv.Atoi(args[1].Value)
+		if err != nil {
+			panic("std.insert expects a number argument")
+		}
+		insert := args[2].Value
+
+		str = str[:index] + insert + str[index:]
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: str,
+		}
+	},
+	"std.slice": func(args []Variable) Variable {
+		if len(args) != 3 {
+			panic("std.slice expects exactly 3 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeNumber && args[2].Type != genalphatypes.ASTNodeTypeNumber {
+			panic("std.slice expects string, number, and number arguments")
+		}
+
+		str := args[0].Value
+		start, err := strconv.Atoi(args[1].Value)
+		if err != nil {
+			panic("std.slice expects a number argument")
+		}
+		end, err := strconv.Atoi(args[2].Value)
+		if err != nil {
+			panic("std.slice expects a number argument")
+		}
+
+		str = str[start:end]
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: str,
+		}
+	},
+	"std.len_indecies": func(args []Variable) Variable {
+		if len(args) != 1 {
+			panic("len expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeArray {
+			panic("len expects an array argument")
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeNumber,
+			Value: fmt.Sprintf("%d", len(args[0].Indecies)),
+		}
+	},
 	"std.input": func(args []Variable) Variable {
 		if len(args) != 2 {
 			panic("std.input expects exactly 2 arguments")
