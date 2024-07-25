@@ -90,8 +90,8 @@ var STDFunctions = map[string]STDFunction{
 		separator := args[1]
 
 		parts := []string{}
-		for i := 0; i < len(array.Indecies); i++ {
-			parts = append(parts, array.Indecies[fmt.Sprint(i)].Value)
+		for _, value := range array.Indecies {
+			parts = append(parts, value.Value)
 		}
 
 		return Variable{
