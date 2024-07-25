@@ -332,12 +332,12 @@ var STDFunctions = map[string]STDFunction{
 			panic("std.input expects exactly 2 arguments")
 		}
 		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeNumber {
-			panic("std.inputln expects string and a number argument")
+			panic("std.input expects string and a number argument")
 		}
 
 		length, err := strconv.Atoi(args[1].Value)
 		if err != nil {
-			panic("std.inputln expects a number argument")
+			panic("std.input expects a number argument")
 		}
 
 		fmt.Print(args[0].Value)
@@ -372,6 +372,42 @@ var STDFunctions = map[string]STDFunction{
 		return Variable{
 			Type:  genalphatypes.ASTNodeTypeString,
 			Value: string(b),
+		}
+	},
+	"std.writable": func(args []Variable) Variable {
+		if len(args) != 1 {
+			panic("std.writable expects exactly 1 argument")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeNumber {
+			panic("std.writable expects a number argument")
+		}
+
+		// returns if the number which is a keycode is a writable character
+		char, err := strconv.Atoi(args[0].Value)
+		if err != nil {
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeBoolean,
+				Value: string(genalphatypes.KeywordFalse),
+			}
+		}
+
+		writable_chars := []string{
+			" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/",
+			"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?",
+			"@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
+			"P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
+			"`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
+			"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "\t",
+		}
+
+		value := string(genalphatypes.KeywordFalse)
+		if strings.Contains(strings.Join(writable_chars, ""), string(rune(char))) {
+			value = string(genalphatypes.KeywordTrue)
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeBoolean,
+			Value: value,
 		}
 	},
 	"term.term_width": func(args []Variable) Variable {
