@@ -99,6 +99,25 @@ var STDFunctions = map[string]STDFunction{
 			Value: strings.Join(parts, separator.Value),
 		}
 	},
+	"std.repeat": func(args []Variable) Variable {
+		if len(args) != 2 {
+			panic("std.repeat expects exactly 2 arguments")
+		}
+		if args[0].Type != genalphatypes.ASTNodeTypeString && args[1].Type != genalphatypes.ASTNodeTypeNumber {
+			panic("std.repeat expects string and number arguments")
+		}
+
+		str := args[0].Value
+		times, err := strconv.Atoi(args[1].Value)
+		if err != nil {
+			panic("std.repeat expects a number argument")
+		}
+
+		return Variable{
+			Type:  genalphatypes.ASTNodeTypeString,
+			Value: strings.Repeat(str, times),
+		}
+	},
 	"std.read": func(args []Variable) Variable {
 		if len(args) != 1 {
 			panic("std.read expects exactly 1 argument")
@@ -397,7 +416,7 @@ var STDFunctions = map[string]STDFunction{
 			"@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O",
 			"P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_",
 			"`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o",
-			"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "\t",
+			"p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~",
 		}
 
 		value := string(genalphatypes.KeywordFalse)
