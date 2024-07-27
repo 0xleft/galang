@@ -190,6 +190,15 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 
 	variable := interpreterState.LocalScope.Variables[name]
 	if variable != nil {
+		if value.Type == genalphatypes.ASTNodeTypeNone {
+			delete(variable.Indecies, index.Value)
+			interpreterState.LocalScope.Variables[name] = variable
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+
 		if variable.Indecies == nil {
 			variable.Indecies = map[string]*Variable{}
 		}
@@ -210,6 +219,15 @@ func interpretMemberAssignment(interpreterState *InterpreterState, node genalpha
 
 	variable = interpreterState.GlobalScope.Variables[name]
 	if variable != nil {
+		if value.Type == genalphatypes.ASTNodeTypeNone {
+			delete(variable.Indecies, index.Value)
+			interpreterState.GlobalScope.Variables[name] = variable
+			return Variable{
+				Type:  genalphatypes.ASTNodeTypeNone,
+				Value: "",
+			}
+		}
+
 		if variable.Indecies == nil {
 			variable.Indecies = map[string]*Variable{}
 		}
