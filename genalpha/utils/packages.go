@@ -22,3 +22,7 @@ func GetInstalledPackagesDirectory() string {
 
 	return userdir + "/.gal/packages/"
 }
+
+func GetPackagePath(name string) string {
+	return GetInstalledPackagesDirectory() + name + "/"
+}

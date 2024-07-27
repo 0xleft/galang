@@ -35,10 +35,7 @@ lowkey main{}
 end
 ```
 
-4. Execute this script in your terminal using `gal hello_world.gal`
-
-> PS
-> You can also use inline scripts like `gal -c "lowkey main{};fire std.println(\"hello world\");end"`
+4. Execute this script in your terminal using `gal run hello_world.gal`
 
 ## Variables 🤑
 
