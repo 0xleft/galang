@@ -14,6 +14,7 @@ import (
 	genalphatypes "bobik.squidwock.com/root/gal/genalpha"
 	"bobik.squidwock.com/root/gal/genalpha/lexer"
 	"bobik.squidwock.com/root/gal/genalpha/parser"
+	"bobik.squidwock.com/root/gal/genalpha/pkg"
 	"bobik.squidwock.com/root/gal/genalpha/utils"
 )
 
@@ -727,7 +728,7 @@ func interpretImport(interpreterState *InterpreterState, node genalphatypes.ASTN
 		importedFilename = newFilename + "/" + filename + "/__.gal"
 		if !utils.FileExists(importedFilename) {
 			// check the installed packages directory
-			importedFilename = utils.GetInstalledPackagesDirectory() + filename + "/__.gal"
+			importedFilename = pkg.GetInstalledPackagesDirectory() + filename + "/__.gal"
 			if !utils.FileExists(importedFilename) {
 				fmt.Println(importedFilename)
 				panic("Package " + filename + " not found" + " in " + newFilename)
