@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"bobik.squidwock.com/root/gal/genalpha/interpreter"
 	"bobik.squidwock.com/root/gal/genalpha/lexer"
@@ -47,11 +48,10 @@ func (p *runCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	contents := utils.ReadContents(filename)
 	tokens := lexer.Lex(contents)
 	ast := parser.Parse(tokens)
-	currentDir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	interpreter.Interpret(&ast, f.Args()[1:], currentDir+"/")
+
+	contextDir := filepath.Dir(filename)
+	fmt.Println("context dir", contextDir+"/")
+	interpreter.Interpret(&ast, f.Args()[1:], contextDir+"/")
 	return subcommands.ExitSuccess
 }
 
