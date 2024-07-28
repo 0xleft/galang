@@ -110,6 +110,18 @@ gal run $EXECUTABLE_PATH $@
 			utils.WriteContents(filePath, fileContents)
 			os.Chmod(filePath, 0755)
 		}
+
+		if !utils.IsExecutableInPath(exe.Name) {
+			fmt.Println("Executable", exe.Name, "is not in path, because it is not in the PATH environment variable")
+			switch runtime.GOOS {
+			case "windows":
+				fmt.Println("Run the following command to add it to path:")
+				fmt.Println("set PATH=%PATH%;" + execPath)
+			default:
+				fmt.Println("Run the following command to add it to path:")
+				fmt.Println("export PATH=$PATH:" + execPath)
+			}
+		}
 	}
 
 	return path, nil

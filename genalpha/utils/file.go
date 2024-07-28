@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 )
@@ -97,5 +98,10 @@ func ReadContents(filename string) string {
 
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
+	return err == nil
+}
+
+func IsExecutableInPath(name string) bool {
+	_, err := exec.LookPath(name)
 	return err == nil
 }

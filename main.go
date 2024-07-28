@@ -50,7 +50,6 @@ func (p *runCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) s
 	ast := parser.Parse(tokens)
 
 	contextDir := filepath.Dir(filename)
-	fmt.Println("context dir", contextDir+"/")
 	interpreter.Interpret(&ast, f.Args()[1:], contextDir+"/")
 	return subcommands.ExitSuccess
 }
