@@ -44,7 +44,3 @@ git clone https://github.com/0xleft/gal
 cd gal
 go build
 ```
-
-## License
-
-This project and all projects using this programming language must be licensed under the skibidi license such as one featured in this repository.
